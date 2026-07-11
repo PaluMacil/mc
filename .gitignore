@@ -1,0 +1,6 @@
+# This repo is public and must never hold secret material. These patterns
+# are a backstop, not a license to be careless.
+.env
+*.key
+*.pem
+*.secret

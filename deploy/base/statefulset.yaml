@@ -1,0 +1,235 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mc
+  labels:
+    app: mc
+spec:
+  serviceName: mc
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mc
+  template:
+    metadata:
+      labels:
+        app: mc
+    spec:
+      # ATM10 takes a while to save on shutdown. Budget: 60s announce delay
+      # (STOP_SERVER_ANNOUNCE_DELAY) + up to 60s stop wait (itzg default
+      # STOP_DURATION) + world save. Do not lower this.
+      terminationGracePeriodSeconds: 300
+      securityContext:
+        # Applied to the Longhorn backups volume so the backup container
+        # (UID 1000) can write to it. local-path volumes ignore fsGroup;
+        # the server entrypoint handles /data ownership itself (it starts
+        # as root, chowns /data to UID/GID 1000, then drops privileges).
+        fsGroup: 1000
+      containers:
+        - name: mc
+          image: itzg/minecraft-server:2026.7.0-java21
+          env:
+            - name: EULA
+              value: "TRUE"
+            - name: TZ
+              value: America/Chicago
+            - name: TYPE
+              value: AUTO_CURSEFORGE
+            - name: CF_SLUG
+              value: all-the-mods-10
+            # Pin: ATM10 7.1, the main (client/manifest) file. Never point
+            # this at a ServerFiles zip; those lack the manifest AUTO_CURSEFORGE
+            # needs. Unpinned, the pack would silently upgrade on any pod
+            # restart. Upgrade procedure: README "Upgrading the modpack".
+            - name: CF_FILE_ID
+              value: "8323938"
+            - name: CF_API_KEY_FILE
+              value: /secrets/cf-api-key
+            # Extra server-side-only mods from Modrinth, pinned by version ID.
+            # Rmp3tvQg = GriefLogger 1.2.9-1.21.1 (neoforge build), block-change
+            # audit for griefing forensics. spark is NOT listed because ATM10
+            # already ships it; adding it again would duplicate the jar.
+            - name: MODRINTH_PROJECTS
+              value: "grieflogger:Rmp3tvQg"
+            # "required" can pull dependency versions that fight the pack's own
+            # pinned mods (itzg/docker-minecraft-server#3849). Pin explicitly
+            # instead if a Modrinth mod ever needs a dependency.
+            - name: MODRINTH_DOWNLOAD_DEPENDENCIES
+              value: "none"
+            - name: MEMORY
+              value: 12G
+            # At 12G and above, itzg applies Aikar's large-heap G1 variant.
+            - name: USE_AIKAR_FLAGS
+              value: "true"
+            # Disable the vanilla watchdog. ATM10 chunk generation can stall a
+            # tick long enough that the watchdog would kill the server.
+            - name: MAX_TICK_TIME
+              value: "-1"
+            # Modded flight (jetpacks, mod elytra) trips the vanilla anti-cheat
+            # and kicks players when this is false.
+            - name: ALLOW_FLIGHT
+              value: "TRUE"
+            - name: VIEW_DISTANCE
+              value: "10"
+            - name: SIMULATION_DISTANCE
+              value: "6"
+            - name: MAX_PLAYERS
+              value: "10"
+            - name: DIFFICULTY
+              value: normal
+            - name: ONLINE_MODE
+              value: "TRUE"
+            - name: ENFORCE_SECURE_PROFILE
+              value: "TRUE"
+            # Every player arrives from tin's IP (nginx stream proxy), which
+            # does not match what Mojang's session server saw. With the vanilla
+            # default (true), nobody can log in. Do not "fix" this to true.
+            - name: PREVENT_PROXY_CONNECTIONS
+              value: "FALSE"
+            - name: WHITELIST
+              value: PaluMacil
+            - name: ENFORCE_WHITELIST
+              value: "TRUE"
+            # SKIP = seed whitelist.json from WHITELIST on first boot only,
+            # then never touch the file again. Runtime RCON additions and
+            # removals survive restarts. The default (SYNC_FILE_MERGE_LIST)
+            # would re-merge the env list every boot.
+            - name: EXISTING_WHITELIST_FILE
+              value: SKIP
+            - name: OPS
+              value: PaluMacil
+            - name: EXISTING_OPS_FILE
+              value: SKIP
+            # RCON stays pod-internal (no Service exposes 25575). rcon-cli
+            # inside the container reads the password automatically.
+            - name: RCON_PASSWORD_FILE
+              value: /secrets/rcon-password
+            # Announce shutdown in-game, then wait this many seconds before
+            # stopping. Pairs with terminationGracePeriodSeconds above.
+            - name: STOP_SERVER_ANNOUNCE_DELAY
+              value: "60"
+          ports:
+            - name: game
+              containerPort: 25565
+          resources:
+            requests:
+              cpu: "4"
+              memory: 13Gi
+            limits:
+              # No CPU limit on purpose. The tick loop is single-threaded and
+              # CFS throttling tanks TPS. Do not add one.
+              memory: 16Gi
+          startupProbe:
+            # First boot downloads the whole pack and generates spawn before
+            # the port ever opens. Budget: 120 x 10s = 20 minutes.
+            exec:
+              command: [mc-health]
+            periodSeconds: 10
+            failureThreshold: 120
+            timeoutSeconds: 10
+          readinessProbe:
+            exec:
+              command: [mc-health]
+            periodSeconds: 10
+            failureThreshold: 3
+            timeoutSeconds: 10
+          livenessProbe:
+            # Forgiving on purpose: a liveness restart bounces a 12G modded
+            # server. 5 x 30s of unresponsiveness before we give up on it.
+            exec:
+              command: [mc-health]
+            periodSeconds: 30
+            failureThreshold: 5
+            timeoutSeconds: 10
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: secrets
+              mountPath: /secrets
+              readOnly: true
+        - name: backup
+          image: itzg/mc-backup:2026.7.0
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+          env:
+            - name: TZ
+              value: America/Chicago
+            - name: BACKUP_METHOD
+              value: restic
+            # Local restic repository on the Longhorn PVC (3 replicas, one per
+            # node), so backups survive losing jade. Deliberately not offsite;
+            # disk and node loss are the failures that matter here.
+            - name: RESTIC_REPOSITORY
+              value: /backups
+            - name: RESTIC_PASSWORD_FILE
+              value: /secrets/restic-password
+            # RCON_HOST defaults to localhost, correct for a same-pod sidecar.
+            # The sidecar runs save-off, save-all flush, sync before each
+            # snapshot and save-on after, so snapshots are world-consistent.
+            - name: RCON_PASSWORD_FILE
+              value: /secrets/rcon-password
+            # Block until the server's RCON is up instead of crash-looping
+            # through the 20 minute first boot.
+            - name: RCON_RETRIES
+              value: "-1"
+            - name: INITIAL_DELAY
+              value: 5m
+            - name: BACKUP_INTERVAL
+              value: 1h
+            # After a backup completes with nobody online, hold further
+            # backups until someone joins again (one final backup still runs
+            # after the last player leaves).
+            - name: PAUSE_IF_NO_PLAYERS
+              value: "true"
+            - name: PLAYERS_ONLINE_CHECK_INTERVAL
+              value: 5m
+            # restic dedup is what makes this retention fit in 80Gi.
+            # PRUNE_BACKUPS_DAYS must stay at its nonzero default or restic
+            # pruning silently disables (itzg/docker-mc-backup quirk).
+            - name: PRUNE_RESTIC_RETENTION
+              value: "--keep-hourly 24 --keep-daily 14 --keep-weekly 8"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              # restic prune holds the repo index in memory. An OOM kill mid
+              # prune is safe (restic is transactional) and the stale lock is
+              # cleared automatically on container restart.
+              memory: 1Gi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+              readOnly: true
+            - name: backups
+              mountPath: /backups
+            - name: secrets
+              mountPath: /secrets
+              readOnly: true
+      volumes:
+        - name: secrets
+          secret:
+            secretName: mc-secrets
+  volumeClaimTemplates:
+    # World and pack on jade's NVMe. Never Longhorn for live world data;
+    # replicated synchronous writes hurt the tick loop. The nodeSelector pin
+    # to jade lives in the homelab overlay, next to the cluster that owns it.
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 150Gi
+    # restic repository, replicated across all three nodes by Longhorn, so
+    # backups survive losing jade entirely.
+    - metadata:
+        name: backups
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: longhorn
+        resources:
+          requests:
+            storage: 80Gi

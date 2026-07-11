@@ -1,0 +1,25 @@
+# Public game entry point, reached from tin's nginx stream proxy over the
+# tailnet at <jade tailnet IP>:30565.
+#
+# externalTrafficPolicy: Local does two things here:
+#   1. Only nodes running the pod answer on the NodePort. The pod is pinned
+#      to jade, so tin points at jade and there is no extra intra-cluster hop.
+#   2. The client source IP is preserved (no SNAT). Every player already
+#      arrives with tin's IP because of the stream proxy; at least we do not
+#      stack a second rewrite on top.
+apiVersion: v1
+kind: Service
+metadata:
+  name: mc-game
+  labels:
+    app: mc
+spec:
+  type: NodePort
+  externalTrafficPolicy: Local
+  selector:
+    app: mc
+  ports:
+    - name: game
+      port: 25565
+      targetPort: game
+      nodePort: 30565

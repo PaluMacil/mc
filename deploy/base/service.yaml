@@ -1,0 +1,15 @@
+# Headless Service for the StatefulSet (spec.serviceName). Gives the pod a
+# stable DNS name (mc-0.mc.mc.svc.cluster.local); nothing routes through it.
+apiVersion: v1
+kind: Service
+metadata:
+  name: mc
+  labels:
+    app: mc
+spec:
+  clusterIP: None
+  selector:
+    app: mc
+  ports:
+    - name: game
+      port: 25565
