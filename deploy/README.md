@@ -35,9 +35,6 @@ kubectl -n mc patch secret mc-secrets --type=json \
 ```
 
 - Generate the two passwords with something like `openssl rand -base64 24`.
-- `cf-api-key` comes from <https://console.curseforge.com> (a personal
-  API key for the CurseForge for Studios API). AUTO_CURSEFORGE cannot
-  download the pack without it.
 - `rcon-password` is shared by the server and the backup sidecar; both
   read it from the mounted Secret.
 - `restic-password` encrypts the backup repository. **Losing it makes
