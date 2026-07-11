@@ -137,6 +137,19 @@ version and a switchover time before touching the pin.
    older ones, which is exactly why step 2 is not optional.
 8. After a verified upgrade, delete the old zip from `/data/modpacks/`.
 
+### Mods that disallow automated downloads
+
+Some mod authors opt out of CurseForge API distribution. When a pack
+version includes one, the installer stops and writes the needed
+filenames to `MODS_NEED_DOWNLOAD.txt` in the log. Fix: stage each file
+at `/data/downloads-repo/mods/<exact filename>` (helper pod or the
+restore pod, as in the upgrade runbook) and restart. Prefer the
+author's official distribution channel; ATM10 7.1's `cc-tweaked` is a
+byte-for-byte mirror of the author's Modrinth artifact, so Modrinth's
+CDN is the sanctioned source. Verify sha1 against the CurseForge file
+record (`/v1/mods/<projectID>/files/<fileID>`; IDs are in the pack's
+`manifest.json`).
+
 ### CurseForge search 403 (why the zip pin exists)
 
 The API key created 2026-07-11 is accepted by every CurseForge endpoint

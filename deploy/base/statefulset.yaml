@@ -55,6 +55,14 @@ spec:
             # must be numeric project IDs, not slugs.
             - name: CF_EXCLUDE_INCLUDE_FILE
               value: ""
+            # Mods whose authors disallow automated CurseForge downloads are
+            # staged in <this>/mods with the exact filename the installer
+            # names in MODS_NEED_DOWNLOAD.txt, fetched from the author's
+            # official channel. Currently: cc-tweaked (the pack mirrors the
+            # author's Modrinth artifact byte for byte; sha1 verified).
+            # README: "Mods that disallow automated downloads".
+            - name: CF_DOWNLOADS_REPO
+              value: /data/downloads-repo
             - name: CF_API_KEY_FILE
               value: /secrets/cf-api-key
             # Extra server-side-only mods from Modrinth, pinned by version ID.
@@ -204,10 +212,11 @@ spec:
             # pruning silently disables (itzg/docker-mc-backup quirk).
             - name: PRUNE_RESTIC_RETENTION
               value: "--keep-hourly 24 --keep-daily 14 --keep-weekly 8"
-            # Image defaults plus modpacks/ (the pre-downloaded pack zips;
-            # re-downloadable, no reason to snapshot 190MB hourly).
+            # Image defaults plus modpacks/ and downloads-repo/ (pre-staged
+            # pack zips and manual-download jars; re-fetchable, no reason to
+            # snapshot ~200MB hourly).
             - name: EXCLUDES
-              value: "*.jar,cache,logs,*.tmp,modpacks"
+              value: "*.jar,cache,logs,*.tmp,modpacks,downloads-repo"
           resources:
             requests:
               cpu: 250m
