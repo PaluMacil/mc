@@ -42,8 +42,12 @@ Sibling repos, usually cloned alongside this one:
   chunk generation otherwise.
 - `EXISTING_WHITELIST_FILE=SKIP` / `EXISTING_OPS_FILE=SKIP`: seed once,
   then runtime RCON changes own the files.
-- `CF_FILE_ID` pins the pack and must point at the **main** file of a
-  release, never the ServerFiles zip (no manifest in those).
+- The pack is pinned by a pre-downloaded **client** zip on the data
+  volume (`CF_MODPACK_ZIP`, with `CF_EXCLUDE_INCLUDE_FILE=""`), never
+  the ServerFiles zip (no manifest in those). This is a workaround for
+  a CurseForge key defect that 403s `/v1/mods/search` only; revert to
+  the `CF_FILE_ID` slug flow only after a regenerated key passes the
+  probe in the README's "CurseForge search 403" section.
 - `MODRINTH_PROJECTS` entries are pinned by version ID;
   `MODRINTH_DOWNLOAD_DEPENDENCIES=none` (dependency resolution fights
   the pack's own pinned mods, itzg issue #3849).

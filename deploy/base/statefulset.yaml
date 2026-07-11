@@ -35,14 +35,26 @@ spec:
               value: America/Chicago
             - name: TYPE
               value: AUTO_CURSEFORGE
+            # Label only while CF_MODPACK_ZIP is in effect (not resolved via
+            # the API in this mode, but required to be present).
             - name: CF_SLUG
               value: all-the-mods-10
-            # Pin: ATM10 7.1, the main (client/manifest) file. Never point
-            # this at a ServerFiles zip; those lack the manifest AUTO_CURSEFORGE
-            # needs. Unpinned, the pack would silently upgrade on any pod
-            # restart. Upgrade procedure: README "Upgrading the modpack".
-            - name: CF_FILE_ID
-              value: "8323938"
+            # WORKAROUND (2026-07-11): the CurseForge API key is rejected by
+            # /v1/mods/search alone (known CF-side key provisioning defect,
+            # itzg/docker-minecraft-server#3591), which breaks slug-based
+            # install. Until a regenerated key passes search (README:
+            # "CurseForge search 403"), the pack installs from a
+            # pre-downloaded CLIENT zip (never the ServerFiles zip; only the
+            # client zip carries manifest.json). The zip on the data volume
+            # IS the version pin: ATM10 7.1, CurseForge file 8323938.
+            # Upgrade procedure: README "Upgrading the modpack".
+            - name: CF_MODPACK_ZIP
+              value: /data/modpacks/atm10-7.1.zip
+            # The image's default exclude/include file is slug-based and would
+            # hit the broken search endpoint; disable it. Any future excludes
+            # must be numeric project IDs, not slugs.
+            - name: CF_EXCLUDE_INCLUDE_FILE
+              value: ""
             - name: CF_API_KEY_FILE
               value: /secrets/cf-api-key
             # Extra server-side-only mods from Modrinth, pinned by version ID.
@@ -192,6 +204,10 @@ spec:
             # pruning silently disables (itzg/docker-mc-backup quirk).
             - name: PRUNE_RESTIC_RETENTION
               value: "--keep-hourly 24 --keep-daily 14 --keep-weekly 8"
+            # Image defaults plus modpacks/ (the pre-downloaded pack zips;
+            # re-downloadable, no reason to snapshot 190MB hourly).
+            - name: EXCLUDES
+              value: "*.jar,cache,logs,*.tmp,modpacks"
           resources:
             requests:
               cpu: 250m

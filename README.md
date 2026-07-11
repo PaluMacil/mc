@@ -98,30 +98,73 @@ Runtime additions persist across restarts: the manifests seed
 
 ### Upgrading the modpack
 
-The pack is pinned by `CF_FILE_ID` in `deploy/base/statefulset.yaml`.
-An unpinned pack that silently upgrades across a restart can corrupt or
-regenerate chunks; never remove the pin.
+The pack is pinned by a pre-downloaded client zip on the data volume,
+referenced by `CF_MODPACK_ZIP` in `deploy/base/statefulset.yaml` (see
+"CurseForge search 403" below for why it is not the usual
+`CF_FILE_ID` pin). An unpinned pack that silently upgrades across a
+restart can corrupt or regenerate chunks; never remove the pin.
 
 **A pack bump is a coordinated event, not a unilateral one.** Every
 player's client must move to the same version at the same time, because
 a version mismatch fails the connection handshake. Announce the new
 version and a switchover time before touching the pin.
 
-1. Find the new version's **main file ID** on the
-   [ATM10 files page](https://www.curseforge.com/minecraft/modpacks/all-the-mods-10/files).
-   Use the main file, not the ServerFiles zip; server zips lack the
-   manifest AUTO_CURSEFORGE needs.
+1. Find the new version on the
+   [ATM10 files page](https://www.curseforge.com/minecraft/modpacks/all-the-mods-10/files)
+   and copy the download URL of the **main file** (the client zip).
+   Never the ServerFiles zip; only the client zip carries the
+   `manifest.json` AUTO_CURSEFORGE needs.
 2. Take a snapshot first:
    `kubectl -n mc exec mc-0 -c backup -- backup now`
-3. Edit `CF_FILE_ID`, commit, tag a new version in this repo.
-4. Bump the `?ref=` pin in homelab `workloads/mc/kustomization.yaml`,
-   commit, push. ArgoCD restarts the pod; the image installs the new
-   pack version on boot.
-5. Watch `kubectl -n mc logs mc-0 -c mc -f` through startup, then have a
-   player verify they can connect.
-6. Rollback: restore the pre-upgrade snapshot (below) **and** revert the
+3. Stage the new zip next to the old one (reuse the restore pod from
+   the runbook below, which mounts `/data` writable):
+   ```sh
+   kubectl -n mc exec mc-restore -- curl -sS -f -L -A "Mozilla/5.0" \
+     -o /data/modpacks/atm10-<version>.zip '<download url>'
+   # verify the byte count against the size shown on the files page
+   kubectl -n mc exec mc-restore -- sh -c 'wc -c < /data/modpacks/atm10-<version>.zip'
+   ```
+4. Point `CF_MODPACK_ZIP` at the new file, commit, tag a new version in
+   this repo.
+5. Bump the `?ref=` pin in homelab `workloads/mc/kustomization.yaml`,
+   commit, push. ArgoCD restarts the pod; the image detects the changed
+   zip and reinstalls, applying the new overrides and removing files
+   the old version owned.
+6. Watch `kubectl -n mc logs mc-0 -c mc -f` through startup, then have a
+   player (on the new client version) verify they can connect.
+7. Rollback: restore the pre-upgrade snapshot (below) **and** revert the
    pin. A world touched by newer mod versions is not safe to load under
    older ones, which is exactly why step 2 is not optional.
+8. After a verified upgrade, delete the old zip from `/data/modpacks/`.
+
+### CurseForge search 403 (why the zip pin exists)
+
+The API key created 2026-07-11 is accepted by every CurseForge endpoint
+except `GET /v1/mods/search`, which answers
+`403 Forbidden: API Key missing or invalid`. This is a known,
+recurring CurseForge-side key provisioning defect
+(itzg/docker-minecraft-server#3591 and discussion #3890); the
+maintainer-endorsed fix is regenerating the key at
+<https://console.curseforge.com>, sometimes more than once. Slug-based
+install (`CF_SLUG` + `CF_FILE_ID`) needs that endpoint; installing from
+`CF_MODPACK_ZIP` does not, but requires `CF_EXCLUDE_INCLUDE_FILE=""`
+because the image's default exclude file is slug-based and would also
+hit search.
+
+To test whether a (re)generated key is healthy:
+
+```sh
+curl -s -o /dev/null -w '%{http_code}\n' -A 'Mozilla/5.0' \
+  -H "x-api-key: $CF_API_KEY" \
+  'https://api.curseforge.com/v1/mods/search?gameId=432&slug=all-the-mods-10'
+# 200 = healthy, 403 = still broken
+```
+
+Once a key passes, update the `mc-secrets` Secret and optionally revert
+to the simpler slug flow: replace `CF_MODPACK_ZIP` and
+`CF_EXCLUDE_INCLUDE_FILE` with `CF_FILE_ID: "<main file id>"`. Both
+flows pin the same way; the zip flow just carries a manual download
+step per upgrade.
 
 ### Backups
 
