@@ -159,8 +159,8 @@ crash a dedicated server unless slug-based excludes work, which the
 broken key prevented. The official server pack sidesteps all three: it
 is built by the pack authors with distribution permission, contains
 exactly the server-side mod list, and needs no CurseForge API at
-runtime. The `cf-api-key` entry in `mc-secrets` is vestigial and kept
-only until deliberately revoked.
+runtime. The CurseForge API key was removed from `mc-secrets` once the
+server-pack flow shipped.
 
 ### Backups
 

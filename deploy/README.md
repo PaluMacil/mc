@@ -15,7 +15,6 @@ other workloads in the homelab README.
 ```sh
 kubectl -n mc create secret generic mc-secrets \
   --from-literal=rcon-password='REPLACE_RANDOM_PASSWORD' \
-  --from-literal=cf-api-key='REPLACE_CURSEFORGE_API_KEY' \
   --from-literal=restic-password='REPLACE_RANDOM_PASSWORD'
 
 kubectl -n mc create secret generic mc-r2 \
@@ -25,11 +24,15 @@ kubectl -n mc create secret generic mc-r2 \
 
 `mc-r2` holds **read-only** Cloudflare R2 credentials for the private
 `mc-mods` bucket that stages the server pack zip. The bucket name and
-endpoint are plain env in the StatefulSet, not secret material.
-`cf-api-key` in `mc-secrets` is vestigial since the switch to
-server-pack installs (kept until deliberately revoked); the RCON and
-restic passwords are live. Never recreate `mc-secrets` casually: the
-restic password encrypts every existing backup.
+endpoint are plain env in the StatefulSet, not secret material. Never
+recreate `mc-secrets` casually: the restic password encrypts every
+existing backup. To change a single key, patch it in place, for
+example:
+
+```sh
+kubectl -n mc patch secret mc-secrets --type=json \
+  -p '[{"op":"remove","path":"/data/some-key"}]'
+```
 
 - Generate the two passwords with something like `openssl rand -base64 24`.
 - `cf-api-key` comes from <https://console.curseforge.com> (a personal
