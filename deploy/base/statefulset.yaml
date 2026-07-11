@@ -86,8 +86,11 @@ spec:
             # default (true), nobody can log in. Do not "fix" this to true.
             - name: PREVENT_PROXY_CONNECTIONS
               value: "FALSE"
+            # Java profile name (verified against Mojang: UUID
+            # 892ab825-9c2d-46cb-94d5-f6ce6babfd00). Note this differs from
+            # the Microsoft gamertag, which has no underscore.
             - name: WHITELIST
-              value: PaluMacil
+              value: Palu_Macil
             - name: ENFORCE_WHITELIST
               value: "TRUE"
             # SKIP = seed whitelist.json from WHITELIST on first boot only,
@@ -97,7 +100,7 @@ spec:
             - name: EXISTING_WHITELIST_FILE
               value: SKIP
             - name: OPS
-              value: PaluMacil
+              value: Palu_Macil
             - name: EXISTING_OPS_FILE
               value: SKIP
             # RCON stays pod-internal (no Service exposes 25575). rcon-cli

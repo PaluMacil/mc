@@ -8,8 +8,11 @@ reconciles it; nothing is applied from here directly.
 
 ## For players
 
-Type **`mc.danwolf.net`** into the vanilla launcher's server address.
-That is the whole setup; the launcher resolves the rest through DNS.
+Run the All the Mods 10 client pack at **exactly the version the server
+runs** (currently 7.1), then connect to **`mc.danwolf.net`**. The
+launcher resolves the rest through DNS. A client on any other pack
+version fails the connection handshake with an unhelpful mod-list
+error; the fix is always "match the server's version", never a setting.
 
 If a launcher misbehaves and refuses to connect, use the explicit
 fallback address: **`game.danwolf.net:25999`**.
@@ -23,7 +26,7 @@ and the cluster sits behind CGNAT, so game traffic detours through
 `tin`, a small VPS with a public IP:
 
 ```
-player (vanilla launcher)
+player (ATM10 client)
   -> DNS: SRV _minecraft._tcp.mc.danwolf.net -> game.danwolf.net:25999
   -> A: game.danwolf.net -> 108.165.213.64 (tin, DNS-only / grey cloud)
   -> tin: nginx stream, public :25999
@@ -98,6 +101,11 @@ Runtime additions persist across restarts: the manifests seed
 The pack is pinned by `CF_FILE_ID` in `deploy/base/statefulset.yaml`.
 An unpinned pack that silently upgrades across a restart can corrupt or
 regenerate chunks; never remove the pin.
+
+**A pack bump is a coordinated event, not a unilateral one.** Every
+player's client must move to the same version at the same time, because
+a version mismatch fails the connection handshake. Announce the new
+version and a switchover time before touching the pin.
 
 1. Find the new version's **main file ID** on the
    [ATM10 files page](https://www.curseforge.com/minecraft/modpacks/all-the-mods-10/files).
