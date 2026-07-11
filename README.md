@@ -98,86 +98,69 @@ Runtime additions persist across restarts: the manifests seed
 
 ### Upgrading the modpack
 
-The pack is pinned by a pre-downloaded client zip on the data volume,
-referenced by `CF_MODPACK_ZIP` in `deploy/base/statefulset.yaml` (see
-"CurseForge search 403" below for why it is not the usual
-`CF_FILE_ID` pin). An unpinned pack that silently upgrades across a
-restart can corrupt or regenerate chunks; never remove the pin.
+The pack is the official ATM10 **server pack** (`ServerFiles-<ver>.zip`),
+stored in the private R2 bucket `mc-mods` and staged onto the data
+volume by the `fetch-pack` initContainer. The staged zip is the version
+pin: the initContainer skips the fetch when the object is already
+present (keyed on object name), and the itzg image records a sha1 of
+the applied pack in `/data/.generic_pack.sum`, so a normal restart
+neither downloads nor re-extracts anything. Changing the object name is
+the only thing that triggers a fetch and a reapply. An unpinned pack
+that silently upgrades across a restart can corrupt or regenerate
+chunks; this design makes that impossible.
 
 **A pack bump is a coordinated event, not a unilateral one.** Every
 player's client must move to the same version at the same time, because
 a version mismatch fails the connection handshake. Announce the new
 version and a switchover time before touching the pin.
 
-1. Find the new version on the
+1. Download the new `ServerFiles-<ver>.zip` from the
    [ATM10 files page](https://www.curseforge.com/minecraft/modpacks/all-the-mods-10/files)
-   and copy the download URL of the **main file** (the client zip).
-   Never the ServerFiles zip; only the client zip carries the
-   `manifest.json` AUTO_CURSEFORGE needs.
-2. Take a snapshot first:
+   with a browser and upload it to the `mc-mods` R2 bucket (Cloudflare
+   dashboard or `wrangler r2 object put`). Verify the sha1 after
+   upload.
+2. Find the new pack's NeoForge version (the `modlist.json` under
+   `config/crash_assistant/` in
+   [AllTheMods/ATM-10](https://github.com/AllTheMods/ATM-10) names it,
+   as does the pack changelog).
+3. Take a snapshot first:
    `kubectl -n mc exec mc-0 -c backup -- backup now`
-3. Stage the new zip next to the old one (reuse the restore pod from
-   the runbook below, which mounts `/data` writable):
-   ```sh
-   kubectl -n mc exec mc-restore -- curl -sS -f -L -A "Mozilla/5.0" \
-     -o /data/modpacks/atm10-<version>.zip '<download url>'
-   # verify the byte count against the size shown on the files page
-   kubectl -n mc exec mc-restore -- sh -c 'wc -c < /data/modpacks/atm10-<version>.zip'
-   ```
-4. Point `CF_MODPACK_ZIP` at the new file, commit, tag a new version in
-   this repo.
+4. In `deploy/base/statefulset.yaml`, update the trio that must move
+   together: `PACK_OBJECT` (initContainer), `GENERIC_PACK` (mc
+   container), and `NEOFORGE_VERSION`. Commit, tag a new version.
 5. Bump the `?ref=` pin in homelab `workloads/mc/kustomization.yaml`,
-   commit, push. ArgoCD restarts the pod; the image detects the changed
-   zip and reinstalls, applying the new overrides and removing files
-   the old version owned.
+   commit, push. ArgoCD restarts the pod: the initContainer fetches the
+   new object, and the image removes every file the old pack installed
+   (tracked in `/data/manifest.txt`) before overlaying the new one.
+   `world/` and the Modrinth-managed mods are never touched.
 6. Watch `kubectl -n mc logs mc-0 -c mc -f` through startup, then have a
    player (on the new client version) verify they can connect.
 7. Rollback: restore the pre-upgrade snapshot (below) **and** revert the
    pin. A world touched by newer mod versions is not safe to load under
-   older ones, which is exactly why step 2 is not optional.
-8. After a verified upgrade, delete the old zip from `/data/modpacks/`.
+   older ones, which is exactly why step 3 is not optional.
+8. After a verified upgrade, delete the old zip from `/data/packs/`.
 
-### Mods that disallow automated downloads
+Hand edits to pack-shipped files (anything under `config/` that came
+from the zip) are deleted and replaced on every pack upgrade. Server
+behavior that must survive upgrades belongs in env vars in the
+StatefulSet, which the image reapplies over `server.properties` every
+boot.
 
-Some mod authors opt out of CurseForge API distribution. When a pack
-version includes one, the installer stops and writes the needed
-filenames to `MODS_NEED_DOWNLOAD.txt` in the log. Fix: stage each file
-at `/data/downloads-repo/mods/<exact filename>` (helper pod or the
-restore pod, as in the upgrade runbook) and restart. Prefer the
-author's official distribution channel; ATM10 7.1's `cc-tweaked` is a
-byte-for-byte mirror of the author's Modrinth artifact, so Modrinth's
-CDN is the sanctioned source. Verify sha1 against the CurseForge file
-record (`/v1/mods/<projectID>/files/<fileID>`; IDs are in the pack's
-`manifest.json`).
+### Why the server pack instead of AUTO_CURSEFORGE
 
-### CurseForge search 403 (why the zip pin exists)
-
-The API key created 2026-07-11 is accepted by every CurseForge endpoint
-except `GET /v1/mods/search`, which answers
-`403 Forbidden: API Key missing or invalid`. This is a known,
-recurring CurseForge-side key provisioning defect
-(itzg/docker-minecraft-server#3591 and discussion #3890); the
-maintainer-endorsed fix is regenerating the key at
-<https://console.curseforge.com>, sometimes more than once. Slug-based
-install (`CF_SLUG` + `CF_FILE_ID`) needs that endpoint; installing from
-`CF_MODPACK_ZIP` does not, but requires `CF_EXCLUDE_INCLUDE_FILE=""`
-because the image's default exclude file is slug-based and would also
-hit search.
-
-To test whether a (re)generated key is healthy:
-
-```sh
-curl -s -o /dev/null -w '%{http_code}\n' -A 'Mozilla/5.0' \
-  -H "x-api-key: $CF_API_KEY" \
-  'https://api.curseforge.com/v1/mods/search?gameId=432&slug=all-the-mods-10'
-# 200 = healthy, 403 = still broken
-```
-
-Once a key passes, update the `mc-secrets` Secret and optionally revert
-to the simpler slug flow: replace `CF_MODPACK_ZIP` and
-`CF_EXCLUDE_INCLUDE_FILE` with `CF_FILE_ID: "<main file id>"`. Both
-flows pin the same way; the zip flow just carries a manual download
-step per upgrade.
+The usual itzg flow (`TYPE=AUTO_CURSEFORGE` + `CF_SLUG` + `CF_FILE_ID`)
+was abandoned on day one after hitting three independent problems: the
+freshly issued CurseForge API key was rejected by `/v1/mods/search`
+alone (a known, recurring CurseForge-side key defect,
+itzg/docker-minecraft-server#3591), one pack mod (`cc-tweaked`)
+disallows automated CurseForge downloads entirely, and the client pack
+carries client-only mods (colorwheel, sodium, iris and friends) that
+crash a dedicated server unless slug-based excludes work, which the
+broken key prevented. The official server pack sidesteps all three: it
+is built by the pack authors with distribution permission, contains
+exactly the server-side mod list, and needs no CurseForge API at
+runtime. The `cf-api-key` entry in `mc-secrets` is vestigial and kept
+only until deliberately revoked.
 
 ### Backups
 

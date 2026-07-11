@@ -42,12 +42,17 @@ Sibling repos, usually cloned alongside this one:
   chunk generation otherwise.
 - `EXISTING_WHITELIST_FILE=SKIP` / `EXISTING_OPS_FILE=SKIP`: seed once,
   then runtime RCON changes own the files.
-- The pack is pinned by a pre-downloaded **client** zip on the data
-  volume (`CF_MODPACK_ZIP`, with `CF_EXCLUDE_INCLUDE_FILE=""`), never
-  the ServerFiles zip (no manifest in those). This is a workaround for
-  a CurseForge key defect that 403s `/v1/mods/search` only; revert to
-  the `CF_FILE_ID` slug flow only after a regenerated key passes the
-  probe in the README's "CurseForge search 403" section.
+- The pack is the official ATM10 **server pack** zip, staged from the
+  private R2 bucket `mc-mods` by the `fetch-pack` initContainer and
+  applied via `GENERIC_PACK`. The pin is the object name; `PACK_OBJECT`,
+  `GENERIC_PACK`, and `NEOFORGE_VERSION` must always move together.
+  There is deliberately no AUTO_CURSEFORGE machinery (README: "Why the
+  server pack instead of AUTO_CURSEFORGE"); do not reintroduce it.
+- `/data/.generic_pack.sum` and `/data/manifest.txt` are load-bearing
+  itzg state (skip-reapply and stale-file cleanup). Never delete them,
+  and never set `SKIP_GENERIC_PACK_UPDATE_CHECK` (silently blocks
+  future pack upgrades) or `REMOVE_OLD_MODS` (forces a full 1.1GB
+  reapply every boot).
 - `MODRINTH_PROJECTS` entries are pinned by version ID;
   `MODRINTH_DOWNLOAD_DEPENDENCIES=none` (dependency resolution fights
   the pack's own pinned mods, itzg issue #3849).

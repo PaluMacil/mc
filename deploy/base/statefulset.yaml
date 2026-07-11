@@ -25,6 +25,55 @@ spec:
         # the server entrypoint handles /data ownership itself (it starts
         # as root, chowns /data to UID/GID 1000, then drops privileges).
         fsGroup: 1000
+      initContainers:
+        # Stage the server pack zip from the private R2 bucket onto the
+        # persistent data volume. Skip-if-present is keyed on the object
+        # name, so a normal restart fetches nothing; bumping PACK_OBJECT
+        # (a new object name) is what triggers a fetch. The .partial + mv
+        # dance keeps a torn download from ever satisfying the skip check.
+        - name: fetch-pack
+          image: curlimages/curl:8.21.0
+          command: [sh, -c]
+          args:
+            - |
+              set -eu
+              dest="/data/packs/${PACK_OBJECT}"
+              if [ -s "$dest" ]; then
+                echo "pack already staged: $dest"
+                exit 0
+              fi
+              mkdir -p /data/packs
+              echo "fetching ${PACK_OBJECT} from R2"
+              curl -sS -f --retry 3 \
+                --aws-sigv4 "aws:amz:auto:s3" \
+                --user "${R2_ACCESS_KEY_ID}:${R2_SECRET_ACCESS_KEY}" \
+                -o "${dest}.partial" \
+                "${R2_ENDPOINT}/${R2_BUCKET}/${PACK_OBJECT}"
+              mv "${dest}.partial" "$dest"
+              wc -c "$dest"
+          env:
+            # Keep PACK_OBJECT in sync with GENERIC_PACK on the mc container.
+            - name: PACK_OBJECT
+              value: ServerFiles-7.1.zip
+            # Endpoint and bucket are not secret material; only the
+            # credentials live in the mc-r2 Secret (read-only key).
+            - name: R2_ENDPOINT
+              value: https://420bf1d048967f710944f505aebf45ca.r2.cloudflarestorage.com
+            - name: R2_BUCKET
+              value: mc-mods
+            - name: R2_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: mc-r2
+                  key: access-key-id
+            - name: R2_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: mc-r2
+                  key: secret-access-key
+          volumeMounts:
+            - name: data
+              mountPath: /data
       containers:
         - name: mc
           image: itzg/minecraft-server:2026.7.0-java21
@@ -33,42 +82,36 @@ spec:
               value: "TRUE"
             - name: TZ
               value: America/Chicago
+            # The official ATM10 SERVER pack (built with the pack authors'
+            # distribution permissions), applied as a generic pack overlay.
+            # No CurseForge API involvement at runtime.
             - name: TYPE
-              value: AUTO_CURSEFORGE
-            # Label only while CF_MODPACK_ZIP is in effect (not resolved via
-            # the API in this mode, but required to be present).
-            - name: CF_SLUG
-              value: all-the-mods-10
-            # WORKAROUND (2026-07-11): the CurseForge API key is rejected by
-            # /v1/mods/search alone (known CF-side key provisioning defect,
-            # itzg/docker-minecraft-server#3591), which breaks slug-based
-            # install. Until a regenerated key passes search (README:
-            # "CurseForge search 403"), the pack installs from a
-            # pre-downloaded CLIENT zip (never the ServerFiles zip; only the
-            # client zip carries manifest.json). The zip on the data volume
-            # IS the version pin: ATM10 7.1, CurseForge file 8323938.
-            # Upgrade procedure: README "Upgrading the modpack".
-            - name: CF_MODPACK_ZIP
-              value: /data/modpacks/atm10-7.1.zip
-            # The image's default exclude/include file is slug-based and would
-            # hit the broken search endpoint; disable it. Any future excludes
-            # must be numeric project IDs, not slugs.
-            - name: CF_EXCLUDE_INCLUDE_FILE
-              value: ""
-            # Mods whose authors disallow automated CurseForge downloads are
-            # staged in <this>/mods with the exact filename the installer
-            # names in MODS_NEED_DOWNLOAD.txt, fetched from the author's
-            # official channel. Currently: cc-tweaked (the pack mirrors the
-            # author's Modrinth artifact byte for byte; sha1 verified).
-            # README: "Mods that disallow automated downloads".
-            - name: CF_DOWNLOADS_REPO
-              value: /data/downloads-repo
-            - name: CF_API_KEY_FILE
-              value: /secrets/cf-api-key
+              value: NEOFORGE
+            - name: VERSION
+              value: "1.21.1"
+            # Must match the pack's loader version exactly (7.1 ships
+            # neoforge 21.1.234 per config/crash_assistant/modlist.json in
+            # AllTheMods/ATM-10). Bump together with the pack.
+            - name: NEOFORGE_VERSION
+              value: "21.1.234"
+            # Keep in sync with PACK_OBJECT on the fetch-pack initContainer.
+            # The image records sha1 state in /data/.generic_pack.sum and
+            # skips the whole extract when unchanged, so normal restarts do
+            # not redo the 1.1GB apply. On change it removes every file the
+            # old pack installed (/data/manifest.txt) before overlaying the
+            # new one; world/ and Modrinth-managed jars are never touched.
+            # Do NOT set SKIP_GENERIC_PACK_UPDATE_CHECK (silently blocks
+            # future upgrades) or REMOVE_OLD_MODS (forces a full reapply
+            # every boot). .generic_pack.sum and manifest.txt in /data are
+            # load-bearing state; never delete them.
+            - name: GENERIC_PACK
+              value: /data/packs/ServerFiles-7.1.zip
             # Extra server-side-only mods from Modrinth, pinned by version ID.
             # Rmp3tvQg = GriefLogger 1.2.9-1.21.1 (neoforge build), block-change
             # audit for griefing forensics. spark is NOT listed because ATM10
             # already ships it; adding it again would duplicate the jar.
+            # Never list a mod the pack itself ships; the pack manifest would
+            # own the filename and delete it on pack upgrades.
             - name: MODRINTH_PROJECTS
               value: "grieflogger:Rmp3tvQg"
             # "required" can pull dependency versions that fight the pack's own
@@ -143,8 +186,9 @@ spec:
               # CFS throttling tanks TPS. Do not add one.
               memory: 16Gi
           startupProbe:
-            # First boot downloads the whole pack and generates spawn before
-            # the port ever opens. Budget: 120 x 10s = 20 minutes.
+            # First boot installs NeoForge, applies the 1.1GB pack, and
+            # generates spawn before the port ever opens. Budget:
+            # 120 x 10s = 20 minutes.
             exec:
               command: [mc-health]
             periodSeconds: 10
@@ -212,11 +256,10 @@ spec:
             # pruning silently disables (itzg/docker-mc-backup quirk).
             - name: PRUNE_RESTIC_RETENTION
               value: "--keep-hourly 24 --keep-daily 14 --keep-weekly 8"
-            # Image defaults plus modpacks/ and downloads-repo/ (pre-staged
-            # pack zips and manual-download jars; re-fetchable, no reason to
-            # snapshot ~200MB hourly).
+            # Image defaults plus packs/ (the staged server pack zips are
+            # re-fetchable from R2; no reason to snapshot 1.1GB hourly).
             - name: EXCLUDES
-              value: "*.jar,cache,logs,*.tmp,modpacks,downloads-repo"
+              value: "*.jar,cache,logs,*.tmp,packs"
           resources:
             requests:
               cpu: 250m
@@ -241,7 +284,7 @@ spec:
             secretName: mc-secrets
   volumeClaimTemplates:
     # World and pack on jade's NVMe. Never Longhorn for live world data;
-    # replicated synchronous writes hurt the tick loop. The nodeSelector pin
+    # replicated sync writes hurt the tick loop. The nodeSelector pin
     # to jade lives in the homelab overlay, next to the cluster that owns it.
     - metadata:
         name: data

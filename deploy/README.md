@@ -6,18 +6,30 @@ This directory is a Kustomize base. It is not applied from here; the
 and ArgoCD reconciles it into the `mc` namespace. The nodeSelector pin
 to `jade` also lives in that overlay.
 
-## Required Secret (imperative, created before first sync)
+## Required Secrets (imperative, created before first sync)
 
-One Secret, `mc-secrets`, in the `mc` namespace. Nothing secret is ever
-committed to this repo; this is the documented out-of-band step, same
-pattern as the other workloads in the homelab README.
+Two Secrets in the `mc` namespace. Nothing secret is ever committed to
+this repo; this is the documented out-of-band step, same pattern as the
+other workloads in the homelab README.
 
 ```sh
 kubectl -n mc create secret generic mc-secrets \
   --from-literal=rcon-password='REPLACE_RANDOM_PASSWORD' \
   --from-literal=cf-api-key='REPLACE_CURSEFORGE_API_KEY' \
   --from-literal=restic-password='REPLACE_RANDOM_PASSWORD'
+
+kubectl -n mc create secret generic mc-r2 \
+  --from-literal=access-key-id='REPLACE_R2_ACCESS_KEY_ID' \
+  --from-literal=secret-access-key='REPLACE_R2_SECRET_ACCESS_KEY'
 ```
+
+`mc-r2` holds **read-only** Cloudflare R2 credentials for the private
+`mc-mods` bucket that stages the server pack zip. The bucket name and
+endpoint are plain env in the StatefulSet, not secret material.
+`cf-api-key` in `mc-secrets` is vestigial since the switch to
+server-pack installs (kept until deliberately revoked); the RCON and
+restic passwords are live. Never recreate `mc-secrets` casually: the
+restic password encrypts every existing backup.
 
 - Generate the two passwords with something like `openssl rand -base64 24`.
 - `cf-api-key` comes from <https://console.curseforge.com> (a personal
