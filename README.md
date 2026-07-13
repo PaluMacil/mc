@@ -283,6 +283,28 @@ Design, to be verified at build time against current BlueMap docs:
   rules). Preference order per house style: a tiny Go binary with
   embedded assets published as `ghcr.io/palumacil/mc-web`, or failing
   that a stock nginx with a ConfigMap. Decide at build time.
+- **Client setup guide on the landing page.** Public-facing, written
+  for parents of the 7 to 13 year old players. Content, in order:
+  Minecraft **Java Edition** with a Microsoft account (Bedrock is a
+  different game; the Java profile name, not the gamertag, is what gets
+  whitelisted and sent to Dan); install the CurseForge app; install
+  All the Mods 10 at **exactly the server's version** from the pack's
+  **Versions tab**, never the default Install button (which grabs the
+  latest and fails the join handshake with a confusing mod error, and
+  the same applies to the app's later update prompts: never take them
+  until the server announces a move); raise allocated memory in the
+  CurseForge settings (about 8 GB on a 16 GB machine, about 5 GB on
+  8 GB); then Multiplayer, Add Server, address `mc.danwolf.net`, with
+  `game.danwolf.net:25999` as the fallback for launchers that ignore
+  SRV.
+  - `ATM-10-7-1.png` in this repo's root is the illustration for the
+    version-selection step: the CurseForge app on the pack's Versions
+    tab with 7.1 correctly being installed from the version list. Embed
+    it next to that step (it becomes a static asset of the landing
+    page when built; move it into the web app's assets directory then).
+  - The guide's version string and this screenshot must move with the
+    server: once the page exists, add "update the landing page guide"
+    as a step in the pack upgrade runbook above.
 - **Ingress** host `mc.danwolf.net`, no `tls:` block (TLS terminates at
   Cloudflare's edge): `/` to the landing page, `/map` to `mc-map`.
   Verify BlueMap tolerates being served under a subpath (its `webroot`
