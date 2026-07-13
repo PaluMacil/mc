@@ -6,11 +6,95 @@ This directory is a Kustomize base. It is not applied from here; the
 and ArgoCD reconciles it into the `mc` namespace. The nodeSelector pin
 to `jade` also lives in that overlay.
 
-## Required Secrets (imperative, created before first sync)
+## Secrets
 
-Two Secrets in the `mc` namespace. Nothing secret is ever committed to
-this repo; this is the documented out-of-band step, same pattern as the
-other workloads in the homelab README.
+Two Secrets in the `mc` namespace, `mc-secrets` and `mc-r2`. Nothing
+secret is ever committed to this repo, and the values are no longer
+created by hand: they live in the cluster's OpenBao and are materialized
+into Kubernetes Secrets by the External Secrets Operator (ESO).
+
+Responsibilities split across two repos:
+
+- **This repo** stays the source of truth for **which fields mc
+  expects** (the Secret and key names the StatefulSet mounts). That
+  contract is documented below.
+- **The homelab repo** owns the wiring: an `ExternalSecret` per Secret
+  in its `workloads/mc/` overlay (`externalsecrets.yaml`). ESO reads
+  OpenBao through the cluster-wide `openbao` `ClusterSecretStore` and
+  writes `mc-secrets` and `mc-r2` into the `mc` namespace on a refresh
+  interval (currently 1h). ArgoCD drift suppression for the CRD-defaulted
+  fields on those `ExternalSecret`s is handled centrally in the homelab
+  repo's `bootstrap/argocd/values.yaml`. Nothing about any of this lives
+  in `deploy/base`, and materializing it needs no version-tag bump here.
+
+### Fields mc expects
+
+This repo defines these names; OpenBao holds one kv field per Secret key
+(kv-v2, paths `kv/mc/mc-secrets` and `kv/mc/mc-r2`).
+
+- `mc-secrets/rcon-password`: shared by the server and the backup
+  sidecar; both read it from the mounted Secret.
+- `mc-secrets/restic-password`: encrypts the backup repository.
+  **Losing it makes every backup permanently unreadable.** It lives in
+  OpenBao and in the password manager. restic has no re-encryption, so
+  it must never be rotated casually: a new password means a new
+  repository and a fresh backup history.
+- `mc-r2/access-key-id`, `mc-r2/secret-access-key`: **read-only**
+  Cloudflare R2 credentials for the private `mc-mods` bucket that stages
+  the server pack zip. The bucket name and endpoint are plain env in the
+  StatefulSet, not secret material.
+
+### Creating or rotating a value
+
+Values live in OpenBao; the normal path is the `bao` CLI from a tailnet
+workstation (CLI install, `BAO_ADDR`, and OIDC login are documented in
+the homelab repo's `dev-env.md`). `bao kv put` writes a complete new
+version of the path, so to change one field without dropping the others
+use `bao kv patch`:
+
+```sh
+# rotate a single field, leaving the rest of the path intact
+bao kv patch kv/mc/mc-secrets rcon-password='...'
+
+# seed or replace an entire secret (every field at once)
+bao kv put kv/mc/mc-r2 access-key-id='...' secret-access-key='...'
+```
+
+Generate passwords with something like `openssl rand -base64 24`. ESO
+re-reads OpenBao on its refresh interval and updates the cluster Secret
+(force it sooner by annotating the `ExternalSecret`, per the homelab
+ESO README); the mc pod picks the change up on its next restart:
+
+```sh
+kubectl -n mc rollout restart statefulset mc
+```
+
+The one-time seeding/cutover recipe (copying a live Secret into OpenBao
+1:1 so ESO can take ownership) lives in the homelab repo's
+`infrastructure/external-secrets/README.md`.
+
+### First-sync ordering
+
+On a fresh sync ArgoCD applies this base and the homelab overlay's
+`ExternalSecret`s together. As long as the values are already in
+OpenBao, ESO materializes `mc-secrets` and `mc-r2` and the pod starts.
+Until the Secret exists (values not yet in OpenBao, or ESO not yet
+Ready) the pod sits in `ContainerCreating` with a mount error, which is
+harmless; it starts on its own once the Secret appears. Check sync
+state with:
+
+```sh
+kubectl -n mc get externalsecret   # want STATUS=SecretSynced, READY=True
+```
+
+### Disaster-recovery fallback (imperative create)
+
+Only if OpenBao or ESO is unavailable and the server must come up
+anyway, the two Secrets can be created imperatively as a stopgap. This
+is break-glass, not the normal path: the `ExternalSecret`s use
+`creationPolicy: Owner`, so once ESO recovers it reconciles these
+Secrets back to the OpenBao values. Seed OpenBao and let ESO take over
+as soon as it is healthy.
 
 ```sh
 kubectl -n mc create secret generic mc-secrets \
@@ -22,38 +106,6 @@ kubectl -n mc create secret generic mc-r2 \
   --from-literal=secret-access-key='REPLACE_R2_SECRET_ACCESS_KEY'
 ```
 
-`mc-r2` holds **read-only** Cloudflare R2 credentials for the private
-`mc-mods` bucket that stages the server pack zip. The bucket name and
-endpoint are plain env in the StatefulSet, not secret material. Never
-recreate `mc-secrets` casually: the restic password encrypts every
-existing backup. To change a single key, patch it in place, for
-example:
-
-```sh
-kubectl -n mc patch secret mc-secrets --type=json \
-  -p '[{"op":"remove","path":"/data/some-key"}]'
-```
-
-- Generate the two passwords with something like `openssl rand -base64 24`.
-- `rcon-password` is shared by the server and the backup sidecar; both
-  read it from the mounted Secret.
-- `restic-password` encrypts the backup repository. **Losing it makes
-  every backup permanently unreadable.** Store it in the password
-  manager, not just in the cluster.
-
-First-sync ordering: ArgoCD creates the namespace and StatefulSet on its
-next reconcile after the homelab commit lands. Until the Secret exists,
-the pod sits in `ContainerCreating` with a mount error, which is
-harmless; create the Secret and the pod starts on its own.
-
-## Rotating the RCON password
-
-```sh
-kubectl -n mc delete secret mc-secrets
-# recreate with the new value, then restart the pod:
-kubectl -n mc rollout restart statefulset mc
-```
-
-The restic password must never be rotated casually; restic has no
-re-encryption, so a new password means a new repository and a fresh
-backup history.
+For a real recovery, reuse the existing `restic-password` from the
+password manager, never a fresh value, or every prior backup becomes
+unreadable.

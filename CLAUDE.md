@@ -20,9 +20,12 @@ Sibling repos, usually cloned alongside this one:
 ## Hard rules
 
 - **No secret material in this repo, ever.** Not in examples, not in
-  comments, not as realistic-looking placeholders. The one Secret
-  (`mc-secrets`) is created imperatively; `deploy/README.md` documents
-  it with obvious placeholders.
+  comments, not as realistic-looking placeholders. The two Secrets
+  (`mc-secrets`, `mc-r2`) are materialized by External Secrets Operator
+  from OpenBao (`kv/mc/*`); the `ExternalSecret` manifests live in the
+  homelab repo, not here. `deploy/README.md` documents the field names
+  mc expects and the break-glass imperative fallback, with obvious
+  placeholders.
 - **No em-dashes in prose** (READMEs, comments, commit messages). Use
   commas, semicolons, or parentheses. Em-dashes are fine inside code.
 - **Verify itzg semantics against the docs**

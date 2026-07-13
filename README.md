@@ -62,7 +62,8 @@ completely separate from the game path.
 
 ```
 deploy/
-  README.md      the imperative Secret (mc-secrets) and first-sync notes
+  README.md      how mc-secrets/mc-r2 come from OpenBao via ESO, plus
+                 the field contract and first-sync notes
   base/          Kustomize base: StatefulSet (server + backup sidecar),
                  headless Service, mc-game NodePort Service
 ```
@@ -339,4 +340,6 @@ without asking Dan. **Gate: Authentik must exist in the cluster first.**
   grant is auditable back to the inviter who minted the link.
 - **Deployment**: same namespace (`mc`), added to this repo's base as a
   single-replica Deployment when built. Secrets (OIDC client, DB
-  credentials) follow the imperative pattern in `deploy/README.md`.
+  credentials) follow the OpenBao + ESO pattern in `deploy/README.md`:
+  values in `kv/mc/*`, an `ExternalSecret` per Secret in the homelab
+  overlay.
