@@ -1,0 +1,19 @@
+# RCON, exposed cluster-internal for the Phase 3 invite app (mc-invite) to issue
+# `whitelist add` after an invitee redeems a link. ClusterIP only: RCON is never
+# reachable from outside the cluster, and the password is the same rcon-password
+# in mc-secrets that the server and backup sidecar already use. The game server
+# enables RCON on 25575 by default (itzg ENABLE_RCON).
+apiVersion: v1
+kind: Service
+metadata:
+  name: mc-rcon
+  labels:
+    app: mc
+spec:
+  type: ClusterIP
+  selector:
+    app: mc
+  ports:
+    - name: rcon
+      port: 25575
+      targetPort: rcon

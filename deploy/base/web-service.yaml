@@ -1,0 +1,15 @@
+# Fronts the mc-web landing page for the Traefik Ingress (/ on mc.danwolf.net).
+apiVersion: v1
+kind: Service
+metadata:
+  name: mc-web
+  labels:
+    app: mc-web
+spec:
+  type: ClusterIP
+  selector:
+    app: mc-web
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

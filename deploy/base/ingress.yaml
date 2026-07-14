@@ -1,0 +1,67 @@
+# Phase 2/3 web surface on mc.danwolf.net, an ordinary tunnel-and-Traefik
+# workload completely separate from the raw-TCP game path (which goes SRV ->
+# game.danwolf.net -> tin, not through this Ingress at all). No tls: block: TLS
+# terminates at Cloudflare's edge and cloudflared forwards plaintext to Traefik.
+#
+# mc.danwolf.net is already a proxied (orange-cloud) CNAME to the cluster tunnel;
+# the same hostname carries both the SRV-referenced game name resolution and
+# this HTTP surface. If the CNAME is somehow missing, HTTP will not route: add a
+# proxied CNAME mc -> <tunnel-uuid>.cfargotunnel.com in Cloudflare (see the
+# Phase 2/3 runbook).
+#
+# Split into two Ingress objects sharing the host so the /map StripPrefix
+# middleware is scoped to the map router only and never touches / or /invite.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mc-web
+  labels:
+    app: mc
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: mc.danwolf.net
+      http:
+        paths:
+          # Landing page. Lowest-priority prefix; the more specific /map and
+          # /invite prefixes below win for their subtrees.
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: mc-web
+                port:
+                  number: 80
+          # Invite app. Served WITH the /invite prefix intact: the app is
+          # path-prefix aware (INVITE_BASE_URL), so do not strip here.
+          - path: /invite
+            pathType: Prefix
+            backend:
+              service:
+                name: mc-invite
+                port:
+                  number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mc-map
+  labels:
+    app: mc
+  annotations:
+    # Redirect bare /map -> /map/, then strip /map before hitting BlueMap.
+    # Order matters: slash first, strip second.
+    traefik.ingress.kubernetes.io/router.middlewares: mc-map-slash@kubernetescrd,mc-map-strip@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: mc.danwolf.net
+      http:
+        paths:
+          - path: /map
+            pathType: Prefix
+            backend:
+              service:
+                name: mc-map
+                port:
+                  number: 8100

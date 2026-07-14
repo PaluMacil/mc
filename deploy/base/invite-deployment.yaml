@@ -1,0 +1,114 @@
+# Phase 3 invite app: trusted friends (the "inviter" role) mint single-use,
+# 7-day invite links; an invitee opens the link, types their Minecraft Java
+# username, and the app resolves it to a UUID against Mojang, then issues
+# `whitelist add` over RCON in the same DB transaction that marks the invite
+# used and writes an audit row. Single replica on purpose: sessions live in
+# process memory, and the redemption path is transactional in Postgres, so two
+# replicas would need a shared session store (see the app README). Served under
+# the /invite subpath of mc.danwolf.net; the app is path-prefix aware via
+# INVITE_BASE_URL, so the Ingress does not strip the prefix.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mc-invite
+  labels:
+    app: mc-invite
+spec:
+  replicas: 1
+  strategy:
+    # Single replica + memory sessions: never run two at once (a rolling
+    # surge would split sessions across pods). Recreate keeps exactly one.
+    type: Recreate
+  selector:
+    matchLabels:
+      app: mc-invite
+  template:
+    metadata:
+      labels:
+        app: mc-invite
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: mc-invite
+          image: ghcr.io/palumacil/mc-invite:v0.3.0
+          env:
+            - name: INVITE_LISTEN_ADDR
+              value: ":8080"
+            # Absolute public base, including the /invite subpath. The app
+            # derives its route prefix, cookie Path, and OIDC redirect URI
+            # (<base>/auth/callback) from this, so it must match the Ingress
+            # path and the redirect URI registered in Authentik exactly.
+            - name: INVITE_BASE_URL
+              value: https://mc.danwolf.net/invite
+            # Authentik OIDC. Per-application issuer (trailing slash required);
+            # go-oidc discovery resolves the rest. Client ID is not secret.
+            - name: INVITE_OIDC_ISSUER
+              value: https://authlayer.cloud/application/o/mc-invite/
+            - name: INVITE_OIDC_CLIENT_ID
+              value: mc-invite
+            # Group names from the `groups` claim mapped to roles. Create these
+            # two groups in Authentik and add members; repoint here to change
+            # the mapping (e.g. INVITE_ADMIN_GROUP=homelab-admins) with no
+            # rebuild. admin: manage inviters, see everything. inviter: mint.
+            - name: INVITE_ADMIN_GROUP
+              value: mc-admin
+            - name: INVITE_INVITER_GROUP
+              value: mc-inviter
+            # Cluster-internal RCON (mc-rcon Service). The invite app is the
+            # only writer of the whitelist besides manual rcon-cli.
+            - name: INVITE_RCON_ADDR
+              value: mc-rcon:25575
+            # Invite link lifetime. 7 days per the design.
+            - name: INVITE_TTL
+              value: 168h
+            # Secrets. OIDC client secret from the ESO-materialized mc-invite
+            # Secret; DB connection URI (points at the CNPG pooler) from the
+            # imperative mc-invite-db-credentials basic-auth Secret; RCON
+            # password reused from the existing mc-secrets.
+            - name: INVITE_OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: mc-invite
+                  key: oidc-client-secret
+            - name: INVITE_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: mc-invite-db-credentials
+                  key: uri
+            - name: INVITE_RCON_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mc-secrets
+                  key: rcon-password
+          ports:
+            - name: http
+              containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 25m
+              memory: 48Mi
+            limits:
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              # Readiness pings Postgres; liveness only checks the process is up,
+              # so a transient DB blip does not trigger a pointless restart.
+              # Both are unprefixed infra endpoints, not under INVITE_BASE_URL.
+              path: /readyz
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 30

@@ -64,6 +64,15 @@ Sibling repos, usually cloned alongside this one:
   un-replicated backups defeat their purpose.
 - `externalTrafficPolicy: Local` on `mc-game`, NodePort 30565: tin's
   nginx points at jade's tailnet IP specifically.
+- BlueMap (Phase 2): `SYNC_SKIP_NEWER_IN_DESTINATION=false` is
+  load-bearing; it is what re-applies `deploy/base/bluemap/core.conf` from
+  the `/config` overlay every boot. Do not set BlueMap's webserver `ip`
+  to localhost (breaks the `mc-map` Service). `/data/bluemap` (render
+  output, re-derivable) is excluded from backups; `/data/config/bluemap`
+  (config) is not, so keep them distinct in `EXCLUDES`.
+- `mc-rcon` (Phase 3) exposes RCON cluster-internal for `mc-invite` only;
+  it is still never reachable from outside the cluster. The password stays
+  the shared `mc-secrets/rcon-password`.
 
 ## Releasing a change
 
@@ -71,10 +80,35 @@ Tag this repo, then bump the `?ref=` pin in homelab
 `workloads/mc/kustomization.yaml`. ArgoCD does the rest. Pack upgrades
 follow the README's "Upgrading the modpack" runbook, snapshot first.
 
+CI builds `ghcr.io/palumacil/mc-web` and `mc-invite` at the git tag, and
+`deploy/base` pins those image tags (the homelab overlay has no `images:`
+block). So when a change touches `web/` or `invite/`, bump the image tags
+in `deploy/base` to the new version in the same commit you tag; otherwise
+ArgoCD keeps deploying the old image. Tag first so the image exists before
+the `?ref=` bump lands.
+
 ## Phase status
 
 - Phase 1 (game server): shipped 2026-07.
-- Phase 2 (landing page + BlueMap on `mc.danwolf.net`): designed in the
-  README, not built. DNS already exists (proxied CNAME to the tunnel).
-- Phase 3 (invite app): designed in the README, **gated on Authentik**,
-  which does not exist in the cluster yet. Do not scaffold it early.
+- Phase 2 (landing page + BlueMap on `mc.danwolf.net`): built. `mc-web`
+  (`web/`) + BlueMap wiring + `mc-map` Service + Ingress with a `/map`
+  StripPrefix middleware, all in `deploy/base`. Not yet cut over (see
+  `DEPLOY-PHASES-2-3.md`): DNS check, image build, pin bump.
+- Phase 3 (invite app): built. `mc-invite` (`invite/`, Go + templ +
+  HTMX, OIDC + Postgres + RCON) + `mc-rcon` Service + Deployment, in
+  `deploy/base`. Authentik and OpenBao are in place; cutover (Authentik
+  app + groups, Postgres database, secrets) is in `DEPLOY-PHASES-2-3.md`.
+
+## The two web apps
+
+- `web/` (`mc-web`) is stdlib-only by design; keep it dependency-free.
+  The pack version is the `-pack-version` flag and the screenshot is
+  `web/assets/atm10-7-1.png`; both move with the server (upgrade runbook).
+- `invite/` (`mc-invite`) is Go + templ + HTMX. Commit the generated
+  `*_templ.go` files (CI checks they are current). Run
+  `templ generate` (v0.3.x) after editing `.templ`. Redemption is
+  security-sensitive: single-use is enforced by `SELECT ... FOR UPDATE`
+  in the same transaction as the RCON grant; do not loosen that. It is a
+  single replica (in-memory sessions); do not scale without a shared
+  session store. Integration tests need Postgres
+  (`INVITE_TEST_DATABASE_URL`); CI provides one.

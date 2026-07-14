@@ -1,0 +1,15 @@
+# Fronts the mc-invite app for the Traefik Ingress (/invite on mc.danwolf.net).
+apiVersion: v1
+kind: Service
+metadata:
+  name: mc-invite
+  labels:
+    app: mc-invite
+spec:
+  type: ClusterIP
+  selector:
+    app: mc-invite
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

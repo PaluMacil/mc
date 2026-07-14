@@ -1,0 +1,114 @@
+package views
+
+templ Home(vm HomeVM) {
+	@Layout("ATM10 invites", vm.Nav) {
+		<h1>Invite a friend</h1>
+		<p class="lead">
+			Mint a single-use link and send it to the person you are inviting. They open it,
+			type their Minecraft Java username, and they are added to the whitelist. No account
+			or sign-in is needed on their end.
+		</p>
+
+		if vm.CanMint {
+			<div class="card">
+				<button class="btn" hx-post={ templ.URL(vm.MintURL) } hx-target="#mint-result" hx-swap="innerHTML">
+					Create an invite link
+				</button>
+				<div id="mint-result"></div>
+			</div>
+		} else {
+			<div class="notice err">Your account is signed in but cannot mint invites.</div>
+		}
+
+		<h2>
+			if vm.ShowAll {
+				All invites
+			} else {
+				Your invites
+			}
+			if vm.AdminView {
+				<a class="linkbtn" style="margin-left:0.8rem;font-size:0.85rem;" href={ templ.SafeURL(vm.ToggleURL) }>
+					if vm.ShowAll {
+						show only mine
+					} else {
+						show everyone's
+					}
+				</a>
+			}
+		</h2>
+
+		if len(vm.Invites) == 0 {
+			<p class="muted">No invites yet.</p>
+		} else {
+			<table>
+				<thead>
+					<tr>
+						<th>Created</th>
+						<th>Expires</th>
+						<th>Status</th>
+						<th>Player</th>
+						if vm.ShowOwner {
+							<th>Created by</th>
+						}
+					</tr>
+				</thead>
+				<tbody>
+					for _, inv := range vm.Invites {
+						<tr>
+							<td>{ inv.CreatedAt }</td>
+							<td>{ inv.ExpiresAt }</td>
+							<td class={ "status-" + inv.Status }>{ inv.Status }</td>
+							<td>
+								if inv.MinecraftName != "" {
+									{ inv.MinecraftName }
+								} else {
+									<span class="muted">&middot;</span>
+								}
+							</td>
+							if vm.ShowOwner {
+								<td class="muted">{ inv.CreatedBy }</td>
+							}
+						</tr>
+					}
+				</tbody>
+			</table>
+		}
+
+		if vm.AdminView && len(vm.Audit) > 0 {
+			<h2>Recent activity</h2>
+			<table>
+				<thead>
+					<tr>
+						<th>When</th>
+						<th>Actor</th>
+						<th>Action</th>
+						<th>Detail</th>
+					</tr>
+				</thead>
+				<tbody>
+					for _, a := range vm.Audit {
+						<tr>
+							<td>{ a.At }</td>
+							<td class="muted">{ a.Actor }</td>
+							<td>{ a.Action }</td>
+							<td><code class="detail">{ a.Detail }</code></td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		}
+	}
+}
+
+// MintResult is the htmx fragment swapped in after minting. The raw link
+// appears only here because only its hash is persisted.
+templ MintResult(vm MintedVM) {
+	<div class="card" style="margin-top:1rem;">
+		<p>Share this single-use link. It expires { vm.ExpiresAt }.</p>
+		<div class="link">
+			<code>{ vm.Link }</code>
+			<button class="btn" type="button" onclick="mcCopy(this)">Copy</button>
+		</div>
+		<p class="muted">This link is shown once. If you lose it, create a new one.</p>
+	</div>
+}

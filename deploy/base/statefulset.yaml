@@ -108,17 +108,30 @@ spec:
               value: /data/packs/ServerFiles-7.1.zip
             # Extra server-side-only mods from Modrinth, pinned by version ID.
             # Rmp3tvQg = GriefLogger 1.2.9-1.21.1 (neoforge build), block-change
-            # audit for griefing forensics. spark is NOT listed because ATM10
-            # already ships it; adding it again would duplicate the jar.
-            # Never list a mod the pack itself ships; the pack manifest would
-            # own the filename and delete it on pack upgrades.
+            # audit for griefing forensics. 8iJcPOHJ = BlueMap 5.7-neoforge, the
+            # last BlueMap release that still supports 1.21.1 (5.8+ moved on);
+            # the server-side live web map (Phase 2), which serves on 8100.
+            # spark is NOT listed because ATM10 already ships it; adding it again
+            # would duplicate the jar. Never list a mod the pack itself ships;
+            # the pack manifest would own the filename and delete it on upgrades.
             - name: MODRINTH_PROJECTS
-              value: "grieflogger:Rmp3tvQg"
+              value: "grieflogger:Rmp3tvQg,bluemap:8iJcPOHJ"
             # "required" can pull dependency versions that fight the pack's own
             # pinned mods (itzg/docker-minecraft-server#3849). Pin explicitly
             # instead if a Modrinth mod ever needs a dependency.
             - name: MODRINTH_DOWNLOAD_DEPENDENCIES
               value: "none"
+            # Pre-seed BlueMap's core.conf from the mounted /config overlay so
+            # the map renders on first boot (accept-download + a single render
+            # thread) instead of needing a hand-edit and a second restart. itzg
+            # copies /config into /data/config before the JVM (and BlueMap)
+            # start, so our file is in place first. false = our file wins every
+            # boot even if the copy on /data is newer; the default (true) lets a
+            # runtime edit shadow ours and silently stop re-applying. Only
+            # /config/bluemap/core.conf is placed here, so nothing else under
+            # /data/config is touched (the sync overlays, it does not delete).
+            - name: SYNC_SKIP_NEWER_IN_DESTINATION
+              value: "false"
             - name: MEMORY
               value: 12G
             # At 12G and above, itzg applies Aikar's large-heap G1 variant.
@@ -166,8 +179,10 @@ spec:
               value: Palu_Macil
             - name: EXISTING_OPS_FILE
               value: SKIP
-            # RCON stays pod-internal (no Service exposes 25575). rcon-cli
-            # inside the container reads the password automatically.
+            # RCON. rcon-cli inside the container reads this password
+            # automatically. Phase 3 adds the mc-rcon ClusterIP Service so the
+            # in-cluster invite app can issue `whitelist add`; RCON is still
+            # never reachable from outside the cluster.
             - name: RCON_PASSWORD_FILE
               value: /secrets/rcon-password
             # Announce shutdown in-game, then wait this many seconds before
@@ -177,6 +192,13 @@ spec:
           ports:
             - name: game
               containerPort: 25565
+            # BlueMap's integrated webserver (Phase 2), exposed cluster-internal
+            # via the mc-map Service and reaching browsers through Traefik /map.
+            - name: map
+              containerPort: 8100
+            # RCON, exposed cluster-internal via the mc-rcon Service (Phase 3).
+            - name: rcon
+              containerPort: 25575
           resources:
             requests:
               cpu: "4"
@@ -213,6 +235,11 @@ spec:
               mountPath: /data
             - name: secrets
               mountPath: /secrets
+              readOnly: true
+            # itzg copies /config into /data/config before the server starts,
+            # so this pre-seeds /data/config/bluemap/core.conf (Phase 2).
+            - name: bluemap-config
+              mountPath: /config/bluemap
               readOnly: true
         - name: backup
           image: itzg/mc-backup:2026.7.0
@@ -256,10 +283,13 @@ spec:
             # pruning silently disables (itzg/docker-mc-backup quirk).
             - name: PRUNE_RESTIC_RETENTION
               value: "--keep-hourly 24 --keep-daily 14 --keep-weekly 8"
-            # Image defaults plus packs/ (the staged server pack zips are
-            # re-fetchable from R2; no reason to snapshot 1.1GB hourly).
+            # Image defaults plus packs/ (staged zips are re-fetchable from R2)
+            # and bluemap/ (BlueMap's rendered web tiles and the downloaded
+            # client jar, all re-derived from the world). This is /data/bluemap,
+            # the render output; /data/config/bluemap is small config and stays
+            # backed up. No reason to snapshot 1.1GB of re-derivable data hourly.
             - name: EXCLUDES
-              value: "*.jar,cache,logs,*.tmp,packs"
+              value: "*.jar,cache,logs,*.tmp,packs,bluemap"
           resources:
             requests:
               cpu: 250m
@@ -282,6 +312,13 @@ spec:
         - name: secrets
           secret:
             secretName: mc-secrets
+        # Phase 2: BlueMap core.conf, pre-seeded into /config so itzg overlays
+        # it onto /data/config/bluemap before the server (and BlueMap) start.
+        # The name-hash suffix is added by the kustomize configMapGenerator, so
+        # a config change rolls the pod to re-sync.
+        - name: bluemap-config
+          configMap:
+            name: mc-bluemap-config
   volumeClaimTemplates:
     # World and pack on jade's NVMe. Never Longhorn for live world data;
     # replicated sync writes hurt the tick loop. The nodeSelector pin

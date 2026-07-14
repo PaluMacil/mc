@@ -1,0 +1,56 @@
+# Phase 2 landing page: a tiny Go binary that serves a static site (server
+# address, live-map link, rules, and the parent-facing client setup guide) with
+# all assets embedded via go:embed. No persistence, no secrets, so it schedules
+# anywhere and is safe to restart freely; it is deliberately not pinned to jade.
+# The image tag moves with this repo's git tag (CI publishes ghcr.io/palumacil/
+# mc-web:<tag> on tag push); keep it in step with the mc-invite tag below.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mc-web
+  labels:
+    app: mc-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mc-web
+  template:
+    metadata:
+      labels:
+        app: mc-web
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: mc-web
+          image: ghcr.io/palumacil/mc-web:v0.3.0
+          args: ["-listen=:8080"]
+          ports:
+            - name: http
+              containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 64Mi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 30

@@ -1,0 +1,19 @@
+# BlueMap's integrated webserver (Phase 2). ClusterIP only: the map reaches
+# browsers through Traefik at mc.danwolf.net/map, never directly. BlueMap binds
+# 0.0.0.0:8100 inside the mc container, so a plain ClusterIP reaches it with no
+# BlueMap-side config; do NOT set BlueMap's webserver ip to localhost or this
+# Service stops working. Selects the same pod as the game and headless Services.
+apiVersion: v1
+kind: Service
+metadata:
+  name: mc-map
+  labels:
+    app: mc
+spec:
+  type: ClusterIP
+  selector:
+    app: mc
+  ports:
+    - name: map
+      port: 8100
+      targetPort: map

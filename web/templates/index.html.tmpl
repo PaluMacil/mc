@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>All the Mods 10 server</title>
+<meta name="description" content="How to install and connect to our All the Mods 10 Minecraft server, written for players and their parents.">
+<style>
+  :root {
+    --bg: #14161a;
+    --panel: #1e2128;
+    --panel-2: #262a33;
+    --text: #e8eaed;
+    --muted: #a7adba;
+    --accent: #5db462;
+    --accent-2: #7fd884;
+    --border: #333844;
+    --warn-bg: #3a2c14;
+    --warn-border: #7a5a1e;
+    --warn-text: #f4d58b;
+    --code-bg: #0f1115;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f4f6f8;
+      --panel: #ffffff;
+      --panel-2: #eef1f5;
+      --text: #1b1e24;
+      --muted: #566072;
+      --accent: #2f8f43;
+      --accent-2: #257035;
+      --border: #d7dde5;
+      --warn-bg: #fff5db;
+      --warn-border: #e2b657;
+      --warn-text: #6b4e12;
+      --code-bg: #eef1f5;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 2rem 1.1rem 4rem; }
+  header { text-align: center; padding: 1.5rem 0 0.5rem; }
+  h1 { font-size: 2rem; margin: 0.2rem 0; letter-spacing: 0.5px; }
+  h2 { font-size: 1.35rem; margin: 2.4rem 0 0.8rem; }
+  h3 { font-size: 1.05rem; margin: 0 0 0.3rem; }
+  .tagline { color: var(--muted); margin: 0.2rem 0 0; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.2rem 1.3rem;
+    margin: 1.2rem 0;
+  }
+  .connect { text-align: center; }
+  .addr {
+    display: inline-flex; align-items: center; gap: 0.6rem;
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0.7rem 0.95rem; margin: 0.4rem 0;
+    font-size: 1.35rem; font-weight: 600;
+  }
+  .addr code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .copy {
+    font: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: #06210b; border: 0;
+    border-radius: 7px; padding: 0.35rem 0.6rem;
+  }
+  .copy:hover { background: var(--accent-2); }
+  .fallback { color: var(--muted); font-size: 0.95rem; margin-top: 0.4rem; }
+  .fallback code { background: var(--code-bg); padding: 0.1rem 0.35rem; border-radius: 5px; }
+  .badge {
+    display: inline-block; background: var(--accent); color: #06210b;
+    font-weight: 700; border-radius: 999px; padding: 0.25rem 0.8rem; font-size: 0.95rem;
+  }
+  .btns { display: flex; flex-wrap: wrap; gap: 0.7rem; justify-content: center; margin-top: 1rem; }
+  .btn {
+    display: inline-block; text-decoration: none; font-weight: 600;
+    border-radius: 9px; padding: 0.7rem 1.1rem; border: 1px solid var(--border);
+    color: var(--text); background: var(--panel-2);
+  }
+  .btn.primary { background: var(--accent); color: #06210b; border-color: transparent; }
+  .btn:hover { filter: brightness(1.08); }
+  .note {
+    background: var(--warn-bg); border: 1px solid var(--warn-border);
+    color: var(--warn-text); border-radius: 10px; padding: 0.8rem 1rem; margin: 1rem 0;
+  }
+  ol.steps { counter-reset: step; list-style: none; padding: 0; margin: 0; }
+  ol.steps > li {
+    position: relative; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.1rem 1.2rem 1.1rem 3.4rem; margin: 0.9rem 0;
+  }
+  ol.steps > li::before {
+    counter-increment: step; content: counter(step);
+    position: absolute; left: 1rem; top: 1.05rem;
+    width: 1.7rem; height: 1.7rem; border-radius: 50%;
+    background: var(--accent); color: #06210b; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  ol.steps p { margin: 0.4rem 0; }
+  .shot { margin: 0.8rem 0 0.2rem; }
+  .shot img { max-width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--border); display: block; }
+  .shot figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 0.4rem; }
+  ul.rules { padding-left: 1.2rem; }
+  ul.rules li { margin: 0.35rem 0; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .em { color: var(--accent-2); font-weight: 600; }
+  footer { text-align: center; color: var(--muted); font-size: 0.9rem; margin-top: 3rem; }
+  footer a { color: var(--muted); }
+  a { color: var(--accent-2); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="badge">Now running pack version {{.PackVersion}}</div>
+    <h1>All the Mods 10</h1>
+    <p class="tagline">A small, whitelist-only Minecraft server for friends and their kids.</p>
+  </header>
+
+  <section class="card connect">
+    <h3>Connect</h3>
+    <div class="addr">
+      <code id="addr">{{.ServerAddress}}</code>
+      <button class="copy" data-copy="{{.ServerAddress}}" type="button">Copy</button>
+    </div>
+    <p class="fallback">If your launcher will not connect, use the explicit address <code>{{.FallbackAddress}}</code> instead.</p>
+    <div class="btns">
+      <a class="btn primary" href="{{.MapPath}}">Open the live map</a>
+      <a class="btn" href="#setup">How do I get on?</a>
+    </div>
+    <p class="fallback">The server is whitelist only. You have to be added before you can join; ask Dan.</p>
+  </section>
+
+  <h2 id="setup">Setting up: a guide for players and parents</h2>
+  <p>This takes about fifteen minutes. The single most common problem is running the
+  <span class="em">wrong version</span> of the modpack, so please read step 3 carefully. If a
+  connection fails with a confusing message about mods, the answer is almost always
+  "match the server's version," never a setting to change.</p>
+
+  <ol class="steps">
+
+    <li>
+      <h3>Install Minecraft: Java Edition</h3>
+      <p>Buy and install <span class="em">Minecraft: Java Edition</span> using a Microsoft account.
+      Bedrock Edition (the version on consoles, phones, and the Windows Store) is a different game
+      and cannot join this server.</p>
+      <p>During setup you pick a <span class="em">Java profile name</span>. That name, not your Xbox
+      gamertag, is what gets added to the whitelist. Write it down exactly (capital letters and
+      underscores matter) and send it to Dan.</p>
+    </li>
+
+    <li>
+      <h3>Install the CurseForge app</h3>
+      <p>Download and install the free <span class="em">CurseForge</span> app. It manages modpacks
+      and keeps them separate from your normal Minecraft.</p>
+    </li>
+
+    <li>
+      <h3>Install All the Mods 10, version {{.PackVersion}}</h3>
+      <p>In CurseForge, search for <span class="em">All the Mods 10</span> and open it. Do
+      <span class="em">not</span> click the big blue Install button: it always installs the newest
+      version, which will not match the server and will fail to connect.</p>
+      <p>Instead open the <span class="em">Versions</span> tab, find
+      <span class="em">All the Mods 10-{{.PackVersion}}</span> in the list, and install that exact one.</p>
+      <figure class="shot">
+        <img src="/assets/atm10-7-1.png"
+             alt="The CurseForge app on the All the Mods 10 Versions tab, installing version {{.PackVersion}} from the version list rather than the default Install button.">
+        <figcaption>The Versions tab. Install version {{.PackVersion}} from this list, not the default Install button.</figcaption>
+      </figure>
+      <div class="note">Later, CurseForge will offer to update the pack. Do not accept those updates
+      until the server announces a version change. Everyone has to move at the same time, or the
+      updated players can no longer connect.</div>
+    </li>
+
+    <li>
+      <h3>Give it enough memory</h3>
+      <p>Modpacks need a lot of memory. In CurseForge settings, raise the allocated memory to about
+      <span class="em">8 GB</span> on a computer with 16 GB of RAM, or about <span class="em">5 GB</span>
+      on a computer with 8 GB. Too little memory is the usual cause of freezes and crashes.</p>
+    </li>
+
+    <li>
+      <h3>Add the server and join</h3>
+      <p>Launch All the Mods 10 from CurseForge. On the Minecraft title screen choose
+      <span class="em">Multiplayer</span>, then <span class="em">Add Server</span>, and enter the
+      address:</p>
+      <p><code>{{.ServerAddress}}</code></p>
+      <p>If your launcher refuses to connect, edit the server and use <code>{{.FallbackAddress}}</code> instead.</p>
+      <p>Make sure Dan has already added your Java profile name to the whitelist; until then the
+      server will turn you away.</p>
+    </li>
+
+  </ol>
+
+  <h2>House rules</h2>
+  <section class="card">
+    <ul class="rules">
+      <li>Be kind. This is a small server for friends; treat people the way you want to be treated.</li>
+      <li>No griefing or stealing. Do not break, take, or change other people's builds and chests.
+      The server keeps a log of who changed which blocks, so this is easy to check.</li>
+      <li>Ask before building right next to someone or borrowing their things.</li>
+      <li>No cheats or hacked clients. Play the pack as it comes.</li>
+      <li>Run pack version {{.PackVersion}}, the same as everyone else, and only update when the
+      server says to.</li>
+      <li>Have fun and build something cool.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <p>Inviting a friend? <a href="{{.InvitePath}}">Sign in to the invite page</a>.</p>
+    <p>&copy; {{.Year}} &middot; a homelab All the Mods 10 server</p>
+  </footer>
+
+</div>
+
+<script>
+  // Progressive enhancement: copy-to-clipboard. If the API is missing or the
+  // page is served without JS, the address is still plainly visible above.
+  document.querySelectorAll(".copy").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var text = b.getAttribute("data-copy");
+      if (!navigator.clipboard) return;
+      navigator.clipboard.writeText(text).then(function () {
+        var old = b.textContent;
+        b.textContent = "Copied";
+        setTimeout(function () { b.textContent = old; }, 1200);
+      });
+    });
+  });
+</script>
+</body>
+</html>

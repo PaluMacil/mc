@@ -1,0 +1,39 @@
+# Traefik middlewares for serving BlueMap under the /map subpath. BlueMap has
+# no base-path setting; its webapp uses relative asset paths and expects to live
+# at the root of whatever it is served from, so the proxy must strip /map before
+# forwarding to the BlueMap webserver (exactly the nginx "proxy_pass .../" +
+# trailing-slash recipe from BlueMap's reverse-proxy docs, expressed for
+# Traefik). These are the first Middleware resources in the fleet.
+#
+# Reference them from an Ingress with, in order:
+#   traefik.ingress.kubernetes.io/router.middlewares: mc-map-slash@kubernetescrd,mc-map-strip@kubernetescrd
+# (Traefik names KubernetesCRD middlewares <namespace>-<name>@kubernetescrd; the
+# overlay pins namespace mc.)
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: map-slash
+  labels:
+    app: mc
+spec:
+  # Redirect the bare /map to /map/ so the browser's document URL ends in a
+  # slash; otherwise BlueMap's relative asset URLs resolve one path segment too
+  # high and the map loads blank. 302 (not permanent) to avoid browsers caching
+  # the redirect while the route is still settling.
+  redirectRegex:
+    regex: ^(https?://[^/]+/map)$
+    replacement: ${1}/
+    permanent: false
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: map-strip
+  labels:
+    app: mc
+spec:
+  # Strip /map so BlueMap sees requests at its own root (/, /assets/..., the
+  # live-player and marker polls under the map data root, etc.).
+  stripPrefix:
+    prefixes:
+      - /map

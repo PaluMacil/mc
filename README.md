@@ -17,7 +17,12 @@ error; the fix is always "match the server's version", never a setting.
 If a launcher misbehaves and refuses to connect, use the explicit
 fallback address: **`game.danwolf.net:25999`**.
 
-The server is whitelist-only. Ask Dan to be added.
+The server is whitelist-only. Ask Dan to be added (or open an invite link
+if someone sent you one).
+
+Open **`https://mc.danwolf.net`** in a browser for the full setup guide
+(written for parents too), and **`https://mc.danwolf.net/map`** for the
+live world map.
 
 ## How traffic flows
 
@@ -62,10 +67,20 @@ completely separate from the game path.
 
 ```
 deploy/
-  README.md      how mc-secrets/mc-r2 come from OpenBao via ESO, plus
-                 the field contract and first-sync notes
+  README.md      how mc-secrets/mc-r2/mc-invite secrets come from OpenBao
+                 via ESO, plus the field contract and first-sync notes
   base/          Kustomize base: StatefulSet (server + backup sidecar),
-                 headless Service, mc-game NodePort Service
+                 headless + mc-game + mc-map + mc-rcon Services, the
+                 mc-web and mc-invite Deployments, Ingress + /map
+                 StripPrefix middleware, and the BlueMap core.conf
+web/             mc-web: the static landing page (Go + embedded assets),
+                 published as ghcr.io/palumacil/mc-web
+invite/          mc-invite: the invite app (Go + templ + HTMX, OIDC,
+                 Postgres, RCON), published as ghcr.io/palumacil/mc-invite
+.github/         CI that tests both apps and, on a version tag, builds
+                 and pushes their images
+DEPLOY-PHASES-2-3.md   one-time cutover runbook for the web surface and
+                 invite app (homelab manifests + imperative steps)
 ```
 
 Releases are git tags here. The homelab repo pins
@@ -128,7 +143,16 @@ version and a switchover time before touching the pin.
    `kubectl -n mc exec mc-0 -c backup -- backup now`
 4. In `deploy/base/statefulset.yaml`, update the trio that must move
    together: `PACK_OBJECT` (initContainer), `GENERIC_PACK` (mc
-   container), and `NEOFORGE_VERSION`. Commit, tag a new version.
+   container), and `NEOFORGE_VERSION`. Then update the landing page guide
+   so players install the matching version: bump the `-pack-version`
+   default in `web/main.go` (or the `args` in
+   `deploy/base/web-deployment.yaml`) and replace
+   `web/assets/atm10-7-1.png` with a screenshot of the new version on the
+   CurseForge Versions tab. If the bump also crosses a Minecraft version,
+   confirm the pinned BlueMap build in `MODRINTH_PROJECTS` still supports
+   it (5.7 is the last build that supports 1.21.1). Commit, tag a new
+   version, and bump the `mc-web`/`mc-invite` image tags in `deploy/base`
+   to match (CI builds those images at the git tag).
 5. Bump the `?ref=` pin in homelab `workloads/mc/kustomization.yaml`,
    commit, push. ArgoCD restarts the pod: the initContainer fetches the
    new object, and the image removes every file the old pack installed
@@ -264,104 +288,88 @@ with its full termination grace, so the server announces the shutdown
 in-game, waits 60 seconds, saves, and comes back a few minutes later.
 Details live in the homelab README.
 
-## Phase 2 (planned): web surface on mc.danwolf.net
+## Phase 2: web surface on mc.danwolf.net
 
 A static landing page and BlueMap (live 3D world map, server-side-only
 mod, no client install), served as an ordinary tunnel-and-Traefik
-workload. The game path is untouched.
+workload. The game path is untouched. Built; the manifests live in
+`deploy/base`, the landing page in `web/`. The one-time cutover (DNS
+check, image build, pin bump) is in `DEPLOY-PHASES-2-3.md`.
 
-Design, to be verified at build time against current BlueMap docs:
-
-- **BlueMap** added to `MODRINTH_PROJECTS` (NeoForge 1.21.1 build,
-  pinned by version ID like GriefLogger). Server-side only. Its
-  integrated webserver serves the map on port 8100; set
-  `accept-download: true` in BlueMap's core config so it may fetch the
-  client resources it renders with, and keep render threads low (1 or
-  2); jade also runs the tick loop.
-- New ClusterIP Service `mc-map` on 8100 in `deploy/base`.
-- **Landing page**: a small static site (server address, map link,
-  rules). Preference order per house style: a tiny Go binary with
-  embedded assets published as `ghcr.io/palumacil/mc-web`, or failing
-  that a stock nginx with a ConfigMap. Decide at build time.
-- **Client setup guide on the landing page.** Public-facing, written
-  for parents of the 7 to 13 year old players. Content, in order:
-  Minecraft **Java Edition** with a Microsoft account (Bedrock is a
-  different game; the Java profile name, not the gamertag, is what gets
-  whitelisted and sent to Dan); install the CurseForge app; install
-  All the Mods 10 at **exactly the server's version** from the pack's
-  **Versions tab**, never the default Install button (which grabs the
-  latest and fails the join handshake with a confusing mod error, and
-  the same applies to the app's later update prompts: never take them
-  until the server announces a move); raise allocated memory in the
-  CurseForge settings (about 8 GB on a 16 GB machine, about 5 GB on
-  8 GB); then Multiplayer, Add Server, address `mc.danwolf.net`, with
-  `game.danwolf.net:25999` as the fallback for launchers that ignore
-  SRV.
-  - `ATM-10-7-1.png` in this repo's root is the illustration for the
-    version-selection step: the CurseForge app on the pack's Versions
-    tab with 7.1 correctly being installed from the version list. Embed
-    it next to that step (it becomes a static asset of the landing
-    page when built; move it into the web app's assets directory then).
-  - The guide's version string and this screenshot must move with the
-    server: once the page exists, add "update the landing page guide"
-    as a step in the pack upgrade runbook above.
+- **BlueMap** is pinned in `MODRINTH_PROJECTS` as `bluemap:8iJcPOHJ`
+  (5.7-neoforge, the last BlueMap release that supports 1.21.1; later
+  releases dropped it). Server-side only, its integrated webserver binds
+  `0.0.0.0:8100`, reached cluster-internal by the `mc-map` ClusterIP
+  Service. `deploy/base/bluemap/core.conf` is pre-seeded onto
+  `/data/config/bluemap` through itzg's `/config` overlay
+  (`SYNC_SKIP_NEWER_IN_DESTINATION=false`) so `accept-download: true` and
+  `render-thread-count: 1` are set on first boot, no hand-edit and second
+  restart. The pod needs outbound HTTPS to Mojang the first time it
+  renders (it downloads and caches the client jar). BlueMap's render
+  output lives at `/data/bluemap` and is excluded from backups (it is
+  re-derived from the world).
+- **Landing page** (`mc-web`, `ghcr.io/palumacil/mc-web`): a tiny
+  stdlib-only Go binary with the template and the version-select
+  screenshot embedded (`web/`). It serves the connect info, a link to the
+  live map, the rules, and the parent-facing client setup guide (Java
+  Edition with a Microsoft account and the Java profile name that gets
+  whitelisted; install CurseForge; install ATM10 at the server's exact
+  version from the **Versions** tab, never the default Install button or
+  an update prompt; raise allocated memory; then Multiplayer, Add Server,
+  `mc.danwolf.net`, fallback `game.danwolf.net:25999`). The version string
+  is the `-pack-version` flag (default matches the server) and the
+  screenshot is `web/assets/atm10-7-1.png`; both move with the pack, per
+  the upgrade runbook above.
+- **Map subpath**: BlueMap has no base-path setting and its webapp uses
+  relative asset paths, so it is served at `mc.danwolf.net/map` via a
+  Traefik `StripPrefix` middleware (plus a redirect of bare `/map` to
+  `/map/` so the relative assets resolve). These are the fleet's first
+  Traefik `Middleware` resources. `map.danwolf.net` as a separate proxied
+  subdomain remains the documented fallback if the subpath ever misbehaves.
 - **Ingress** host `mc.danwolf.net`, no `tls:` block (TLS terminates at
-  Cloudflare's edge): `/` to the landing page, `/map` to `mc-map`.
-  Verify BlueMap tolerates being served under a subpath (its `webroot`
-  setting); if not, use `map.danwolf.net` as a second proxied tunnel
-  record instead.
-- DNS is already in place: `mc.danwolf.net` is a proxied CNAME to the
-  cluster tunnel, exactly like the other public hostnames.
+  Cloudflare's edge): `/` to `mc-web`, `/map` to `mc-map` (prefix
+  stripped), `/invite` to the Phase 3 app. `mc.danwolf.net` is already a
+  proxied CNAME to the cluster tunnel.
 
-## Phase 3 (planned, gated on Authentik): invite app
+## Phase 3: invite app
 
 A small web service so trusted friends can whitelist their own kids
-without asking Dan. **Gate: Authentik must exist in the cluster first.**
+without asking Dan. Built (`invite/`, image
+`ghcr.io/palumacil/mc-invite`); Authentik and OpenBao are in place. The
+one-time cutover (Authentik app, Postgres database, secrets) is in
+`DEPLOY-PHASES-2-3.md`.
 
-- **Stack**: Go + templ + HTMX. Image `ghcr.io/palumacil/mc-invite`,
-  public on ghcr. Postgres via the shared CNPG pooler
-  (`postgres-pooler.postgres.svc.cluster.local:5432`); a `Database` CR
-  and managed role per the homelab postgres README. OIDC against
-  Authentik.
-- **Roles** from OIDC group claims: `admin` (Dan: manage inviters, see
-  everything) and `inviter` (mint invite links).
-- **Flow**: an inviter logs in and mints a single-use invite link with a
-  7 day expiry. The invitee (a child, who logs in to nothing) opens the
-  link and types their Minecraft username. The service resolves the
-  username to a UUID against Mojang's API (reject unknown names), then
-  issues `whitelist add <name>` over RCON, marks the invite used, and
-  writes an audit row.
-- **RCON wiring**: a ClusterIP Service `mc-rcon` (25575, added to
-  `deploy/base` in this phase) reachable only in-cluster; password
-  reused from `mc-secrets`. The app retries politely; the server may be
-  mid-restart.
-- **Schema sketch** (final DDL at build time):
-  ```sql
-  create table invites (
-    id             bigint generated always as identity primary key,
-    token_hash     bytea not null unique,   -- random token, hashed at rest
-    created_by     text not null,           -- OIDC subject of the inviter
-    created_at     timestamptz not null default now(),
-    expires_at     timestamptz not null,
-    used_at        timestamptz,
-    minecraft_name text,
-    minecraft_uuid uuid
-  );
-  create table audit_log (
-    id     bigint generated always as identity primary key,
-    at     timestamptz not null default now(),
-    actor  text not null,    -- OIDC subject, or 'invitee' for redemptions
-    action text not null,    -- invite_created, invite_redeemed, whitelist_add, ...
-    detail jsonb not null
-  );
-  ```
+- **Stack**: Go + templ + HTMX, single replica. Postgres via the shared
+  CNPG pooler (`postgres-pooler.postgres.svc.cluster.local:5432`); the
+  schema (`invite/migrations/schema.sql`) is applied idempotently on
+  startup. OIDC (Authorization Code + PKCE) against Authentik at
+  `authlayer.cloud`. Served under `mc.danwolf.net/invite`; the app is
+  path-prefix aware, so the Ingress does not strip the prefix.
+- **Roles** from the OIDC `groups` claim: `admin` (manage inviters, see
+  everything and the audit log) and `inviter` (mint links). The group
+  names are env-configurable (`INVITE_ADMIN_GROUP` default `mc-admin`,
+  `INVITE_INVITER_GROUP` default `mc-inviter`); admin implies inviter.
+- **Flow**: an inviter signs in and mints a single-use link with a 7 day
+  expiry (`INVITE_TTL`). The invitee (who signs in to nothing) opens the
+  link and types their Minecraft Java username. The app resolves it to a
+  UUID against Mojang (rejecting unknown names, and distinguishing a real
+  "no such player" from a transient Mojang outage), then issues
+  `whitelist add <name>` over RCON in the **same database transaction**
+  that marks the invite used and writes the audit row.
+- **RCON wiring**: the `mc-rcon` ClusterIP Service (25575) reaches the
+  server in-cluster only; the password is the existing
+  `mc-secrets/rcon-password`. The app reconnects per command and retries
+  with backoff, since the server may be mid-restart.
 - **Security posture**: redemption is unauthenticated by design, so the
-  token is the credential: 128 bits random, stored hashed, single-use
-  enforced in the same transaction as the whitelist grant, rate-limited
-  per IP (accepting that IPs collapse behind CGNAT households). Every
-  grant is auditable back to the inviter who minted the link.
-- **Deployment**: same namespace (`mc`), added to this repo's base as a
-  single-replica Deployment when built. Secrets (OIDC client, DB
-  credentials) follow the OpenBao + ESO pattern in `deploy/README.md`:
-  values in `kv/mc/*`, an `ExternalSecret` per Secret in the homelab
-  overlay.
+  token is the credential: 128 bits of entropy, stored only as a sha256
+  hash, single-use enforced by a `SELECT ... FOR UPDATE` in the same
+  transaction as the grant (so concurrent redemptions of one link grant
+  exactly once, and a failed grant rolls back and leaves the link
+  usable). Redemption is rate-limited per client IP (accepting that IPs
+  collapse behind CGNAT households), CSRF is covered by
+  `Sec-Fetch-Site` (`http.CrossOriginProtection`), and every grant is
+  auditable back to the inviter who minted the link.
+- **Secrets**: OIDC client secret via OpenBao + ESO (`kv/mc/mc-invite`);
+  DB credentials via the imperative `mc-invite-db-credentials` basic-auth
+  Secret carrying a pooler `uri` (the homelab postgres convention); RCON
+  password reused from `mc-secrets`. Field contract in `deploy/README.md`.
