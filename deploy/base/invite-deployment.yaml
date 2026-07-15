@@ -5,8 +5,10 @@
 # used and writes an audit row. Single replica on purpose: sessions live in
 # process memory, and the redemption path is transactional in Postgres, so two
 # replicas would need a shared session store (see the app README). Served under
-# the /invite subpath of mc.danwolf.net; the app is path-prefix aware via
-# INVITE_BASE_URL, so the Ingress does not strip the prefix.
+# the /portal subpath of mc.danwolf.net (it does more than invites: guest
+# sign-in now, a live player list later); the app is path-prefix aware via
+# INVITE_BASE_URL, so the Ingress does not strip the prefix. The Authentik
+# application slug and client id are both "minecraft" for the same reason.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -35,26 +37,30 @@ spec:
           type: RuntimeDefault
       containers:
         - name: mc-invite
-          image: ghcr.io/palumacil/mc-invite:v0.3.0
+          image: ghcr.io/palumacil/mc-invite:v0.3.1
           env:
             - name: INVITE_LISTEN_ADDR
               value: ":8080"
-            # Absolute public base, including the /invite subpath. The app
+            # Absolute public base, including the /portal subpath. The app
             # derives its route prefix, cookie Path, and OIDC redirect URI
             # (<base>/auth/callback) from this, so it must match the Ingress
-            # path and the redirect URI registered in Authentik exactly.
+            # path and the redirect URI registered in Authentik exactly
+            # (https://mc.danwolf.net/portal/auth/callback).
             - name: INVITE_BASE_URL
-              value: https://mc.danwolf.net/invite
-            # Authentik OIDC. Per-application issuer (trailing slash required);
-            # go-oidc discovery resolves the rest. Client ID is not secret.
+              value: https://mc.danwolf.net/portal
+            # Authentik OIDC. Per-application issuer (trailing slash required),
+            # slug "minecraft"; go-oidc discovery resolves the rest. Client ID
+            # is not secret.
             - name: INVITE_OIDC_ISSUER
-              value: https://authlayer.cloud/application/o/mc-invite/
+              value: https://authlayer.cloud/application/o/minecraft/
             - name: INVITE_OIDC_CLIENT_ID
-              value: mc-invite
+              value: minecraft
             # Group names from the `groups` claim mapped to roles. Create these
-            # two groups in Authentik and add members; repoint here to change
-            # the mapping (e.g. INVITE_ADMIN_GROUP=homelab-admins) with no
-            # rebuild. admin: manage inviters, see everything. inviter: mint.
+            # in Authentik and add members; repoint here to change the mapping
+            # (e.g. INVITE_ADMIN_GROUP=homelab-admins) with no rebuild. admin:
+            # manage inviters, see everything. inviter: mint links. A signed-in
+            # user in neither (an mc-guest who self-registered) sees a pending
+            # page until an admin adds them to a group.
             - name: INVITE_ADMIN_GROUP
               value: mc-admin
             - name: INVITE_INVITER_GROUP
@@ -66,19 +72,20 @@ spec:
             # Invite link lifetime. 7 days per the design.
             - name: INVITE_TTL
               value: 168h
-            # Secrets. OIDC client secret from the ESO-materialized mc-invite
-            # Secret; DB connection URI (points at the CNPG pooler) from the
-            # imperative mc-invite-db-credentials basic-auth Secret; RCON
-            # password reused from the existing mc-secrets.
+            # Secrets. OIDC client secret from the ESO-materialized "minecraft"
+            # Secret (kv/mc/minecraft); DB connection URI (points at the CNPG
+            # pooler) from the imperative minecraft-db-credentials basic-auth
+            # Secret; RCON password reused from the existing mc-secrets. The
+            # "minecraft" names are deliberately broader than "invite".
             - name: INVITE_OIDC_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: mc-invite
+                  name: minecraft
                   key: oidc-client-secret
             - name: INVITE_DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: mc-invite-db-credentials
+                  name: minecraft-db-credentials
                   key: uri
             - name: INVITE_RCON_PASSWORD
               valueFrom:

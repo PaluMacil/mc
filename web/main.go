@@ -30,7 +30,7 @@ type pageData struct {
 	ServerAddress   string
 	FallbackAddress string
 	MapPath         string
-	InvitePath      string
+	PortalPath      string
 	Year            int
 }
 
@@ -40,7 +40,7 @@ func main() {
 	serverAddr := flag.String("server-address", "mc.danwolf.net", "address players enter in the Minecraft launcher")
 	fallbackAddr := flag.String("fallback-address", "game.danwolf.net:25999", "explicit fallback for launchers that ignore SRV")
 	mapPath := flag.String("map-path", "/map/", "path the live BlueMap is served under (trailing slash matters)")
-	invitePath := flag.String("invite-path", "/invite/", "path the invite app is served under")
+	portalPath := flag.String("portal-path", "/portal/", "path the member portal (sign in, invites) is served under")
 	flag.Parse()
 
 	data := pageData{
@@ -48,7 +48,7 @@ func main() {
 		ServerAddress:   *serverAddr,
 		FallbackAddress: *fallbackAddr,
 		MapPath:         *mapPath,
-		InvitePath:      *invitePath,
+		PortalPath:      *portalPath,
 		Year:            time.Now().Year(),
 	}
 

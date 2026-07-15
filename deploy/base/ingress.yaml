@@ -32,9 +32,9 @@ spec:
                 name: mc-web
                 port:
                   number: 80
-          # Invite app. Served WITH the /invite prefix intact: the app is
-          # path-prefix aware (INVITE_BASE_URL), so do not strip here.
-          - path: /invite
+          # Member portal (mc-invite). Served WITH the /portal prefix intact:
+          # the app is path-prefix aware (INVITE_BASE_URL), so do not strip.
+          - path: /portal
             pathType: Prefix
             backend:
               service:

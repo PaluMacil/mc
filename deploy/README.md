@@ -30,7 +30,7 @@ Responsibilities split across two repos:
 ### Fields mc expects
 
 This repo defines these names; OpenBao holds one kv field per Secret key
-(kv-v2, paths `kv/mc/mc-secrets`, `kv/mc/mc-r2`, `kv/mc/mc-invite`).
+(kv-v2, paths `kv/mc/mc-secrets`, `kv/mc/mc-r2`, `kv/mc/minecraft`).
 
 - `mc-secrets/rcon-password`: shared by the server, the backup sidecar,
   and (Phase 3) the `mc-invite` app; all read it from a mounted Secret.
@@ -43,13 +43,16 @@ This repo defines these names; OpenBao holds one kv field per Secret key
   Cloudflare R2 credentials for the private `mc-mods` bucket that stages
   the server pack zip. The bucket name and endpoint are plain env in the
   StatefulSet, not secret material.
-- `mc-invite/oidc-client-secret` (Phase 3): the confidential OIDC client
-  secret Authentik generates for the `mc-invite` application. The client
+- `minecraft/oidc-client-secret` (Phase 3): the confidential OIDC client
+  secret Authentik generates for the `minecraft` application. The client
   ID is not secret (it is plain env in the Deployment,
-  `INVITE_OIDC_CLIENT_ID`); only this secret goes through OpenBao + ESO.
+  `INVITE_OIDC_CLIENT_ID=minecraft`); only this secret goes through
+  OpenBao + ESO. The Secret and its OpenBao path are named `minecraft`
+  (not `mc-invite`) because the app is broader than invites (guest
+  sign-in, and later a live player list).
 
 One more Phase 3 Secret does **not** come from OpenBao:
-`mc-invite-db-credentials` is created imperatively in both the `postgres`
+`minecraft-db-credentials` is created imperatively in both the `postgres`
 and `mc` namespaces per the homelab postgres README (a
 `kubernetes.io/basic-auth` Secret; CNPG reconciles the role password from
 the `postgres`-namespace copy, and the app mounts the `mc`-namespace

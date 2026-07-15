@@ -25,14 +25,14 @@ Repo paths below are in the sibling `homelab` repo unless noted.
 
 ## 1. Build and publish the images
 
-1. Cut a tag in **this** repo (the image tags in `deploy/base` are
-   currently `v0.3.0`; keep them in step with the tag you push):
+1. Cut a tag in **this** repo (the image tags in `deploy/base` must match
+   the tag you push; they are currently `v0.3.1`):
    ```sh
-   git tag v0.3.0 && git push origin v0.3.0
+   git tag v0.3.1 && git push origin v0.3.1
    ```
    CI (`.github/workflows/ci.yml`) tests both apps and pushes
-   `ghcr.io/palumacil/mc-web:v0.3.0` and
-   `ghcr.io/palumacil/mc-invite:v0.3.0`.
+   `ghcr.io/palumacil/mc-web:v0.3.1` and
+   `ghcr.io/palumacil/mc-invite:v0.3.1`.
 2. **Make both ghcr packages public** the first time (GitHub, Packages,
    each package, Package settings, Change visibility, Public). The base
    references them without a pull secret; public is the simplest path and
@@ -40,157 +40,134 @@ Repo paths below are in the sibling `homelab` repo unless noted.
    per-namespace `ghcr-pull-secret` (OpenBao + ESO, `dockerconfigjson`
    type) and an `imagePullSecrets` patch in the overlay instead.
 
-## 2. Phase 2 only (optional partial cutover)
+## 2. Phase 2 goes live with the pin bump
 
-Phase 2 (landing page + map) has no secret or database dependencies, so
-you can ship it before Phase 3 if you want. The single Ingress in the
-base also routes `/invite`, so `/invite` will 404 until Phase 3's pods
-exist; that is harmless. To do Phase 2 alone, skip to step 5 with the pin
-bump; `mc-web` and `mc-map` come up immediately, `mc-invite` sits in
-`ContainerCreating`/`CrashLoopBackOff` until its secrets exist (also
-harmless, it recovers on its own once they do). Otherwise do Phase 3
-first, below, and cut over once.
+Phase 2 (landing page + map) has no secret or database dependencies. When
+the `?ref=` pin is bumped (done in the homelab repo), `mc-web` and `mc-map`
+come up immediately and the game StatefulSet rolls to add BlueMap. The
+single Ingress also routes `/portal` to the Phase 3 app; that app sits in
+`CreateContainerConfigError` until its `minecraft` / `minecraft-db-credentials`
+Secrets exist. That is harmless (it recovers on its own once the Phase 3
+steps below are done) but not tidy, so finish Phase 3's Authentik + secret
+steps promptly after cutover.
 
-## 3. Phase 3: Authentik application and groups
+## 3. Phase 3: Authentik application, groups, and enrollment
 
 All of this is manual in the Authentik admin UI (there is no provider or
-application blueprint in git; that is the house convention).
+application blueprint in git; that is the house convention). The app is
+named `minecraft`, not `mc-invite`, because it does more than invites
+(guest sign-in, and later a live player list).
 
-1. **Groups** (Directory, Groups): create `mc-admin` and `mc-inviter`.
-   Add yourself to `mc-admin`. Add trusted inviters to `mc-inviter`.
-   (These names are the defaults `INVITE_ADMIN_GROUP` /
-   `INVITE_INVITER_GROUP`; change both places if you rename them.)
-2. **Provider** (Applications, Providers, Create, OAuth2/OpenID):
+1. **Groups** (Directory, Groups): create `mc-admin`, `mc-inviter`, and
+   `mc-guest`. Add yourself to `mc-admin`. `mc-inviter` is for trusted
+   friends who mint invites. `mc-guest` is where self-registered users
+   land (see enrollment below); a user in only `mc-guest` (or no group)
+   is signed in but sees a "pending" page until you promote them into
+   `mc-inviter` or `mc-admin`. (`mc-admin` / `mc-inviter` are the defaults
+   `INVITE_ADMIN_GROUP` / `INVITE_INVITER_GROUP`; change both places if
+   you rename them. `mc-guest` is not referenced by name in the app;
+   "no elevated role" is what triggers the pending page.)
+2. **Enrollment flow** (Flows & Stages): enable a self-service
+   registration flow so people can create an account without you (homelab
+   default is deny-unknown). Bind it as the application's or brand's
+   enrollment flow, and add a stage that puts new users into the
+   `mc-guest` group. This is what gives you a way to onboard users: they
+   self-register into `mc-guest`, then you promote the ones you trust.
+3. **Provider** (Applications, Providers, Create, OAuth2/OpenID):
    - Client type: **Confidential**.
+   - Grant types: **Authorization Code** (required). Refresh Token is
+     fine to leave enabled but the app does not use it (sessions are
+     server-side); it does not request `offline_access`.
    - Authorization flow: the default implicit-consent authorize flow.
    - Signing key: the authentik self-signed certificate (RS256).
-   - Redirect URI, **strict**: `https://mc.danwolf.net/invite/auth/callback`
-     (this is exactly `INVITE_BASE_URL` + `/auth/callback`).
+   - Redirect URI, **strict**: `https://mc.danwolf.net/portal/auth/callback`
+     (this is exactly `INVITE_BASE_URL` + `/auth/callback`; note the
+     `/portal` path, not `/invite`).
    - Scopes: `openid`, `profile`, `email`. The app reads groups from the
-     `profile` mapping; it falls back to the userinfo endpoint, so you do
+     `profile` mapping and falls back to the userinfo endpoint, so you do
      not have to enable "Include claims in id_token" (you may if you
      prefer groups in the ID token).
-3. **Application** (Applications, Create, with the provider above):
-   - Slug: **`mc-invite`**. This must match `INVITE_OIDC_ISSUER`
-     (`https://authlayer.cloud/application/o/mc-invite/`). If you use a
+4. **Application** (Applications, Create, with the provider above):
+   - Slug: **`minecraft`**. This must match `INVITE_OIDC_ISSUER`
+     (`https://authlayer.cloud/application/o/minecraft/`). If you use a
      different slug, update `INVITE_OIDC_ISSUER` in
      `deploy/base/invite-deployment.yaml`.
-4. Note the generated **client ID** and **client secret**. The client ID
-   defaults to `mc-invite` in the Deployment env; if Authentik generated a
-   different one, set `INVITE_OIDC_CLIENT_ID` accordingly. The client
-   secret goes into OpenBao next.
+5. The **client ID** is `minecraft` (committed as `INVITE_OIDC_CLIENT_ID`).
+   The generated **client secret** goes into OpenBao next.
 
-## 4. Phase 3: OpenBao secret + homelab manifests
+## 4. Phase 3: OpenBao secret and database
 
-### 4a. Seed the OIDC client secret in OpenBao
+The homelab **manifests** for Phase 3 (the `minecraft` ExternalSecret, the
+CNPG `minecraft` Database and managed role, and the `?ref=` pin) are
+already committed in the homelab repo. What remains here is the imperative
+work that never lives in git: seeding OpenBao and creating the DB
+credential Secrets.
+
+### 4a. OIDC client secret in OpenBao (rename to the broad name)
+
+The client secret belongs at `kv/mc/minecraft` (the `minecraft`
+ExternalSecret extracts from there). If you already saved it at
+`kv/mc/mc-invite`, copy it over and drop the old path:
 
 ```sh
-bao kv put kv/mc/mc-invite oidc-client-secret='<client-secret-from-authentik>'
+bao kv get -field=oidc-client-secret kv/mc/mc-invite \
+  | bao kv put kv/mc/minecraft oidc-client-secret=-
+bao kv metadata delete kv/mc/mc-invite   # optional cleanup
 ```
 
-### 4b. Add the ExternalSecret (workloads/mc/externalsecrets.yaml)
+Or seed it fresh:
 
-Append this block (mirrors the existing `mc-secrets` / `mc-r2` blocks;
-`namespace: mc` is supplied by the overlay's kustomization):
-
-```yaml
----
-apiVersion: external-secrets.io/v1
-kind: ExternalSecret
-metadata:
-  name: mc-invite
-spec:
-  refreshInterval: 1h
-  secretStoreRef:
-    kind: ClusterSecretStore
-    name: openbao
-  target:
-    name: mc-invite
-    creationPolicy: Owner
-  dataFrom:
-    - extract:
-        key: mc/mc-invite
+```sh
+bao kv put kv/mc/minecraft oidc-client-secret='<client-secret-from-authentik>'
 ```
 
-### 4c. Create the database and role (infrastructure/postgres)
+### 4b. Database credential Secrets (imperative, both namespaces)
 
-Follow the postgres README's "Adding a new app database" recipe.
+Per the homelab postgres README. Use a URL-safe password (hex) so it drops
+cleanly into the connection `uri` (base64 can contain `/` or `+`, which
+would need percent-encoding):
 
-1. Imperative DB-credential Secrets in **both** namespaces. Use a
-   URL-safe password (hex) so it drops cleanly into the connection `uri`
-   (the README example uses base64, but base64 can contain `/` or `+`,
-   which then need percent-encoding in the URI; hex avoids that):
-   ```sh
-   PGPASS=$(openssl rand -hex 24)
+```sh
+PGPASS=$(openssl rand -hex 24)
 
-   kubectl -n postgres create secret generic mc-invite-db-credentials \
-     --type=kubernetes.io/basic-auth \
-     --from-literal=username=mc_invite \
-     --from-literal=password="$PGPASS"
+kubectl -n postgres create secret generic minecraft-db-credentials \
+  --type=kubernetes.io/basic-auth \
+  --from-literal=username=minecraft \
+  --from-literal=password="$PGPASS"
 
-   kubectl -n mc create secret generic mc-invite-db-credentials \
-     --type=kubernetes.io/basic-auth \
-     --from-literal=username=mc_invite \
-     --from-literal=password="$PGPASS" \
-     --from-literal=uri="postgresql://mc_invite:${PGPASS}@postgres-pooler.postgres.svc.cluster.local:5432/mc_invite"
+kubectl -n mc create secret generic minecraft-db-credentials \
+  --type=kubernetes.io/basic-auth \
+  --from-literal=username=minecraft \
+  --from-literal=password="$PGPASS" \
+  --from-literal=uri="postgresql://minecraft:${PGPASS}@postgres-pooler.postgres.svc.cluster.local:5432/minecraft"
 
-   unset PGPASS
-   ```
-2. Add the managed role in `infrastructure/postgres/cluster.yaml` under
-   `spec.managed.roles`:
-   ```yaml
-       - name: mc_invite
-         ensure: present
-         login: true
-         passwordSecret:
-           name: mc-invite-db-credentials
-   ```
-3. Add `infrastructure/postgres/databases/mc-invite.yaml`:
-   ```yaml
-   apiVersion: postgresql.cnpg.io/v1
-   kind: Database
-   metadata:
-     name: mc-invite
-     namespace: postgres
-     annotations:
-       argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
-   spec:
-     cluster:
-       name: postgres
-     name: mc_invite
-     owner: mc_invite
-     databaseReclaimPolicy: retain
-   ```
-   and list it under `resources:` in
-   `infrastructure/postgres/kustomization.yaml`.
-
-The app applies its own schema (`invite/migrations/schema.sql`) idempotently
-on startup, so no migration job is needed.
-
-## 5. Bump the pin and let ArgoCD reconcile
-
-In `workloads/mc/kustomization.yaml`, bump the pin to the tag from step 1:
-
-```yaml
-resources:
-  - https://github.com/PaluMacil/mc//deploy/base?ref=v0.3.0
+unset PGPASS
 ```
 
-Commit and push the homelab changes (externalsecrets, postgres, pin).
-ArgoCD applies the base and the overlay together. Order is forgiving: if
-a Secret is not yet present the pod waits in `ContainerCreating` and
-starts on its own once ESO (or the imperative `kubectl create`) has
-produced it.
+CNPG reconciles the `minecraft` role's password from the `postgres`-namespace
+Secret and creates the `minecraft` database (both from the committed
+manifests); the app reads the `mc`-namespace Secret's `uri` key. The app
+applies its own schema (`invite/migrations/schema.sql`) idempotently on
+startup, so no migration job is needed.
+
+## 5. Bump the pin (already committed in homelab)
+
+The `?ref=` pin in `workloads/mc/kustomization.yaml` is bumped to `v0.3.1`
+and pushed alongside the `minecraft` ExternalSecret and CNPG Database/role.
+ArgoCD applies the base and overlay together. Order is forgiving: if a
+Secret is not yet present the pod waits and starts on its own once ESO
+(the `minecraft` OpenBao value) or the imperative `kubectl create`
+(`minecraft-db-credentials`) has produced it.
 
 ## 6. Verify
 
 ```sh
 # secrets materialized
-kubectl -n mc get externalsecret            # mc-secrets, mc-r2, mc-invite: SecretSynced / Ready
-kubectl -n mc get secret mc-invite-db-credentials
+kubectl -n mc get externalsecret            # mc-secrets, mc-r2, minecraft: SecretSynced / Ready
+kubectl -n mc get secret minecraft-db-credentials
 
 # database and role
-kubectl -n postgres get database mc-invite  # Ready
+kubectl -n postgres get database minecraft  # Ready
 
 # pods
 kubectl -n mc get pods                       # mc-0, mc-web, mc-invite all Ready
@@ -203,10 +180,11 @@ Then from a browser:
 - `https://mc.danwolf.net/map` loads the BlueMap (give BlueMap a few
   minutes on first boot to download Mojang assets and render spawn; watch
   `kubectl -n mc logs mc-0 -c mc -f` for BlueMap render progress).
-- `https://mc.danwolf.net/invite` redirects you through Authentik and,
-  once you are in `mc-inviter` or `mc-admin`, shows the dashboard. Mint a
-  link, open it in a private window, enter a Java username, and confirm
-  the player lands on the whitelist:
+- `https://mc.danwolf.net/portal` redirects you through Authentik and,
+  once you are in `mc-inviter` or `mc-admin`, shows the dashboard (a user
+  in only `mc-guest` sees the pending page). Mint a link, open it in a
+  private window, enter a Java username, and confirm the player lands on
+  the whitelist:
   ```sh
   kubectl -n mc exec mc-0 -c mc -- rcon-cli whitelist list
   ```

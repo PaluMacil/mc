@@ -93,6 +93,13 @@ func (s *Server) home(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	u := userFrom(ctx)
 
+	// Signed in but not yet granted a role: show the pending page, not the
+	// dashboard. An admin promotes them by adding them to a group in Authentik.
+	if !u.IsInviter() && !u.IsAdmin() {
+		s.render(w, r, views.Pending(s.nav(u, false)))
+		return
+	}
+
 	showAll := u.IsAdmin() && r.URL.Query().Get("all") == "1"
 	owner := ""
 	if !showAll {

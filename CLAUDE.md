@@ -90,14 +90,18 @@ the `?ref=` bump lands.
 ## Phase status
 
 - Phase 1 (game server): shipped 2026-07.
-- Phase 2 (landing page + BlueMap on `mc.danwolf.net`): built. `mc-web`
-  (`web/`) + BlueMap wiring + `mc-map` Service + Ingress with a `/map`
-  StripPrefix middleware, all in `deploy/base`. Not yet cut over (see
-  `DEPLOY-PHASES-2-3.md`): DNS check, image build, pin bump.
-- Phase 3 (invite app): built. `mc-invite` (`invite/`, Go + templ +
+- Phase 2 (landing page + BlueMap on `mc.danwolf.net`): built and
+  deployed. `mc-web` (`web/`) + BlueMap wiring + `mc-map` Service +
+  Ingress with a `/map` StripPrefix middleware, all in `deploy/base`.
+- Phase 3 (member portal): built. `mc-invite` (`invite/`, Go + templ +
   HTMX, OIDC + Postgres + RCON) + `mc-rcon` Service + Deployment, in
-  `deploy/base`. Authentik and OpenBao are in place; cutover (Authentik
-  app + groups, Postgres database, secrets) is in `DEPLOY-PHASES-2-3.md`.
+  `deploy/base`. The workload keeps the `mc-invite` name (image,
+  Deployment), but its user-facing identity is broader: served at
+  `/portal`, Authentik slug/client id `minecraft`, secret `minecraft`,
+  DB `minecraft` (it does more than invites: guest sign-up, later a live
+  player list). Cutover (Authentik app + `mc-admin`/`mc-inviter`/`mc-guest`
+  groups + enrollment flow, Postgres database, secrets) is in
+  `DEPLOY-PHASES-2-3.md`.
 
 ## The two web apps
 
@@ -106,9 +110,12 @@ the `?ref=` bump lands.
   `web/assets/atm10-7-1.png`; both move with the server (upgrade runbook).
 - `invite/` (`mc-invite`) is Go + templ + HTMX. Commit the generated
   `*_templ.go` files (CI checks they are current). Run
-  `templ generate` (v0.3.x) after editing `.templ`. Redemption is
+  `templ generate` (v0.3.x) after editing `.templ`. Config uses the
+  `INVITE_*` env prefix even though the app is branded `minecraft`/portal;
+  the prefix is internal, do not churn it. Redemption is
   security-sensitive: single-use is enforced by `SELECT ... FOR UPDATE`
-  in the same transaction as the RCON grant; do not loosen that. It is a
-  single replica (in-memory sessions); do not scale without a shared
-  session store. Integration tests need Postgres
+  in the same transaction as the RCON grant; do not loosen that. A
+  signed-in user with no `mc-admin`/`mc-inviter` role is a guest and gets
+  the pending page. It is a single replica (in-memory sessions); do not
+  scale without a shared session store. Integration tests need Postgres
   (`INVITE_TEST_DATABASE_URL`); CI provides one.

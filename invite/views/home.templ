@@ -100,6 +100,22 @@ templ Home(vm HomeVM) {
 	}
 }
 
+// Pending is shown to a signed-in user who has no role yet (a self-registered
+// mc-guest). They cannot do anything until an admin grants them access.
+templ Pending(nav NavVM) {
+	@Layout("ATM10 portal", nav) {
+		<h1>Your account is pending</h1>
+		<div class="card">
+			<p>You are signed in, but your account has not been granted access yet.
+			Ask Dan to approve you; once he does, reload this page and you will be able
+			to mint invite links.</p>
+			if nav.Email != "" {
+				<p class="muted">Signed in as { nav.Email }.</p>
+			}
+		</div>
+	}
+}
+
 // MintResult is the htmx fragment swapped in after minting. The raw link
 // appears only here because only its hash is persisted.
 templ MintResult(vm MintedVM) {

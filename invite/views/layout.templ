@@ -15,7 +15,7 @@ templ Layout(title string, nav NavVM) {
 		</head>
 		<body>
 			<header class="topbar">
-				<a class="brand" href={ templ.SafeURL(nav.HomeURL) }>ATM10 invites</a>
+				<a class="brand" href={ templ.SafeURL(nav.HomeURL) }>ATM10 portal</a>
 				if !nav.HideAuth {
 					<nav class="authnav">
 						if nav.SignedIn {

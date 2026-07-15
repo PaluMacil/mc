@@ -328,27 +328,33 @@ check, image build, pin bump) is in `DEPLOY-PHASES-2-3.md`.
   subdomain remains the documented fallback if the subpath ever misbehaves.
 - **Ingress** host `mc.danwolf.net`, no `tls:` block (TLS terminates at
   Cloudflare's edge): `/` to `mc-web`, `/map` to `mc-map` (prefix
-  stripped), `/invite` to the Phase 3 app. `mc.danwolf.net` is already a
+  stripped), `/portal` to the Phase 3 app. `mc.danwolf.net` is already a
   proxied CNAME to the cluster tunnel.
+- **Planned**: a live online-player list on the landing page (from the
+  server's status ping or RCON), so you can see who is on without joining.
 
-## Phase 3: invite app
+## Phase 3: member portal (invites and sign-up)
 
 A small web service so trusted friends can whitelist their own kids
-without asking Dan. Built (`invite/`, image
-`ghcr.io/palumacil/mc-invite`); Authentik and OpenBao are in place. The
-one-time cutover (Authentik app, Postgres database, secrets) is in
-`DEPLOY-PHASES-2-3.md`.
+without asking Dan, and so people can self-register and be granted access.
+Built (`invite/`, image `ghcr.io/palumacil/mc-invite`); Authentik and
+OpenBao are in place. The one-time cutover (Authentik app + groups +
+enrollment, Postgres database, secrets) is in `DEPLOY-PHASES-2-3.md`.
 
 - **Stack**: Go + templ + HTMX, single replica. Postgres via the shared
   CNPG pooler (`postgres-pooler.postgres.svc.cluster.local:5432`); the
   schema (`invite/migrations/schema.sql`) is applied idempotently on
   startup. OIDC (Authorization Code + PKCE) against Authentik at
-  `authlayer.cloud`. Served under `mc.danwolf.net/invite`; the app is
-  path-prefix aware, so the Ingress does not strip the prefix.
+  `authlayer.cloud` (application slug and client id `minecraft`, since it
+  does more than invites). Served under `mc.danwolf.net/portal`; the app
+  is path-prefix aware, so the Ingress does not strip the prefix.
 - **Roles** from the OIDC `groups` claim: `admin` (manage inviters, see
   everything and the audit log) and `inviter` (mint links). The group
   names are env-configurable (`INVITE_ADMIN_GROUP` default `mc-admin`,
-  `INVITE_INVITER_GROUP` default `mc-inviter`); admin implies inviter.
+  `INVITE_INVITER_GROUP` default `mc-inviter`); admin implies inviter. A
+  signed-in user with neither role is a guest (self-registered into
+  `mc-guest` via the Authentik enrollment flow) and sees a "pending" page
+  until an admin promotes them, which is how new users get onboarded.
 - **Flow**: an inviter signs in and mints a single-use link with a 7 day
   expiry (`INVITE_TTL`). The invitee (who signs in to nothing) opens the
   link and types their Minecraft Java username. The app resolves it to a

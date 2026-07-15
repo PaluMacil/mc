@@ -173,11 +173,14 @@ func (a *Auth) Callback(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// A user with no admin/inviter role is a guest: someone who self-registered
+	// (Authentik enrollment lands them in mc-guest) but has not been granted
+	// permissions yet. We still sign them in so they see a clear "pending"
+	// page and so an admin has a real account to promote, rather than bouncing
+	// them with a 403.
 	roles := rolesFromGroups(groups, a.cfg.AdminGroup, a.cfg.InviterGroup)
 	if len(roles) == 0 {
-		a.log.Info("authenticated user has no mc role", "subject", idToken.Subject, "groups", groups)
-		http.Error(w, "You are signed in but not authorized for the invite app. Ask Dan to add you.", http.StatusForbidden)
-		return
+		a.log.Info("authenticated guest with no role yet", "subject", idToken.Subject, "groups", groups)
 	}
 
 	// New session token on privilege change, to prevent session fixation.
