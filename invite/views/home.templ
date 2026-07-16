@@ -129,14 +129,21 @@ templ InviteRow(inv InviteRowVM) {
 }
 
 // Players is the online-players fragment, polled on the dashboard and fetched
-// by the public landing page.
+// by the public landing page. Names render as a list of chips so "who is on"
+// reads as a list, not a bare count; the empty case says so explicitly.
 templ Players(vm PlayersVM) {
 	if vm.Available {
 		<span class="dot"></span>
 		<span class="pcount">{ vm.Online } / { vm.Max }</span>
 		<span>online</span>
-		if vm.NamesText != "" {
-			<span class="pnames">{ vm.NamesText }</span>
+		if len(vm.Names) > 0 {
+			<span class="pnames">
+				for _, n := range vm.Names {
+					<span class="pchip">{ n }</span>
+				}
+			</span>
+		} else {
+			<span class="pnames">no one is on right now</span>
 		}
 	} else {
 		<span class="dot off"></span>

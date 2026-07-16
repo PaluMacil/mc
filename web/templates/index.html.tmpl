@@ -114,25 +114,23 @@
   .topnav { display: flex; gap: 1.1rem; flex-wrap: wrap; padding: 0.2rem 0 1.4rem; }
   .topnav a { color: var(--muted); text-decoration: none; font-weight: 600; }
   .topnav a:hover { color: var(--text); }
+  .topnav a.signedin { color: var(--accent-2); }
   .statusbar { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
     background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px;
     padding: 0.6rem 0.9rem; margin: 1rem 0 0; font-size: 0.95rem; }
   .dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--accent); display: inline-block; }
   .dot.off { background: var(--muted); }
   .pcount { font-weight: 700; }
-  .pnames { color: var(--muted); }
+  .pnames { color: var(--muted); display: flex; gap: 0.35rem; flex-wrap: wrap; align-items: center; }
+  .pchip { background: var(--panel); border: 1px solid var(--border); color: var(--text);
+    border-radius: 999px; padding: 0.05rem 0.55rem; font-size: 0.85rem; }
   .statusbar .maplink { margin-left: auto; }
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <nav class="topnav">
-    <a href="/">Home</a>
-    <a href="{{.MapPath}}">Live map</a>
-    <a href="{{.ParentsPath}}">Parent tips</a>
-    <a href="{{.PortalPath}}">Sign in</a>
-  </nav>
+  {{template "topnav" .}}
 
   <header>
     <div class="badge">Now running pack version {{.PackVersion}}</div>
@@ -268,5 +266,6 @@
     setInterval(refresh, 20000);
   })();
 </script>
+{{template "authscript" .}}
 </body>
 </html>

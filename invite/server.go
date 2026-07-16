@@ -73,6 +73,11 @@ func (s *Server) Handler() http.Handler {
 	// Public: who is online. Not behind login, so the landing page can embed it.
 	mux.HandleFunc("GET "+base+"/players", s.playersHandler)
 
+	// Public: session probe. The static landing page (a separate binary with no
+	// access to this app's session) calls it to show the signed-in name instead
+	// of a perpetual "Sign in" link.
+	mux.HandleFunc("GET "+base+"/whoami", s.whoami)
+
 	// Inviter/admin dashboard.
 	mux.HandleFunc("GET "+base+"/{$}", s.auth.requireAuth(s.home))
 	mux.HandleFunc("GET "+base+"/login", s.auth.Login)
@@ -211,11 +216,28 @@ func (s *Server) playersHandler(w http.ResponseWriter, r *http.Request) {
 		vm.Available = true
 		vm.Online = op.Online
 		vm.Max = op.Max
-		vm.NamesText = strings.Join(op.Names, ", ")
+		vm.Names = op.Names
 	}
 	// Short client cache so many pollers do not each hit the app.
 	w.Header().Set("Cache-Control", "public, max-age=10")
 	s.render(w, r, views.Players(vm))
+}
+
+// whoami reports the current session's sign-in state as JSON. The landing page
+// (mc-web, a static binary that cannot see this app's session cookie contents)
+// fetches it to turn its "Sign in" link into the member's name when signed in.
+func (s *Server) whoami(w http.ResponseWriter, r *http.Request) {
+	resp := struct {
+		SignedIn bool   `json:"signedIn"`
+		Name     string `json:"name,omitempty"`
+	}{}
+	if u, ok := s.auth.currentUser(r.Context()); ok {
+		resp.SignedIn = true
+		resp.Name = u.DisplayName()
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 func (s *Server) redeemForm(w http.ResponseWriter, r *http.Request) {

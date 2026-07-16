@@ -1,0 +1,38 @@
+{{/*
+Shared fragments for the static public pages so the nav and the sign-in-state
+script stay identical across index, tips, and parents. This file defines only
+named templates; it is never rendered on its own. Each page supplies its own
+<style>, so the nav relies on that page's .topnav rules.
+*/}}
+{{define "topnav" -}}
+<nav class="topnav">
+    <a href="/">Home</a>
+    <a href="{{.MapPath}}">Live map</a>
+    <a href="{{.TipsPath}}">Player tips</a>
+    <a href="{{.ParentsPath}}">Parent tips</a>
+    <a id="nav-portal" href="{{.PortalPath}}">Sign in</a>
+  </nav>
+{{- end}}
+
+{{define "authscript" -}}
+<script>
+  // These public pages are static and have no session of their own. Ask the
+  // portal (same origin) who we are; if signed in, turn the "Sign in" link into
+  // the member's name pointing at their dashboard. Silent no-op if unreachable,
+  // so the link falls back to plain "Sign in".
+  (function () {
+    var link = document.getElementById("nav-portal");
+    if (!link) return;
+    fetch({{.WhoamiURL}}, { headers: { "Accept": "application/json" }, credentials: "same-origin" })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+      .then(function (me) {
+        if (me && me.signedIn) {
+          link.textContent = me.name || "My portal";
+          link.classList.add("signedin");
+          link.setAttribute("aria-label", "Signed in as " + (me.name || "member") + "; open the member portal");
+        }
+      })
+      .catch(function () {});
+  })();
+</script>
+{{- end}}

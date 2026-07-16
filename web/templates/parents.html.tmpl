@@ -26,6 +26,7 @@
   .topnav { display:flex; gap:1.1rem; flex-wrap:wrap; padding:0.2rem 0 1.4rem; }
   .topnav a { color:var(--muted); text-decoration:none; font-weight:600; }
   .topnav a:hover { color:var(--text); }
+  .topnav a.signedin { color:var(--accent2); }
   h1 { font-size:1.8rem; margin:0.3rem 0 0.4rem; }
   h2 { font-size:1.3rem; margin:2.2rem 0 0.6rem; }
   h3 { font-size:1.05rem; margin:1.2rem 0 0.3rem; }
@@ -47,12 +48,7 @@
 <body>
 <div class="wrap">
 
-  <nav class="topnav">
-    <a href="/">Home</a>
-    <a href="{{.MapPath}}">Live map</a>
-    <a href="{{.ParentsPath}}">Parent tips</a>
-    <a href="{{.PortalPath}}">Sign in</a>
-  </nav>
+  {{template "topnav" .}}
 
   <h1>Parent tips: parental controls and Minecraft</h1>
   <p class="lead">All the Mods 10 is <span class="em">Minecraft Java Edition</span>, which runs on a
@@ -131,9 +127,10 @@
   </div>
 
   <footer>
-    <p><a href="/">Back to the main page</a> &middot; questions? Ask Dan.</p>
+    <p><a href="/">Back to the main page</a> &middot; new to modded Minecraft? See the <a href="{{.TipsPath}}">player tips</a> &middot; questions? Ask Dan.</p>
   </footer>
 
 </div>
+{{template "authscript" .}}
 </body>
 </html>

@@ -38,7 +38,7 @@ type PlayersVM struct {
 	Available bool // false when RCON could not be reached
 	Online    int
 	Max       int
-	NamesText string // comma-joined online names, pre-formatted
+	Names     []string // online player names, rendered as a list of chips
 	MapURL    string
 }
 

@@ -76,6 +76,25 @@ func newTestServer(t *testing.T, wl minecraftRCON, limiter *ipLimiter) (*Server,
 	}, store
 }
 
+// newStatelessTestServer wires just enough of a Server for the public routes
+// that never touch Postgres (players, whoami), so they run without a test DB.
+func newStatelessTestServer(t *testing.T, wl minecraftRCON) *Server {
+	t.Helper()
+	base, _ := url.Parse("https://mc.danwolf.net/invite")
+	sessions := scs.New()
+	cfg := Config{BaseURL: base, BasePath: "/invite", MapURL: "/map/"}
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	return &Server{
+		cfg:      cfg,
+		auth:     &Auth{cfg: cfg, sessions: sessions, log: log},
+		sessions: sessions,
+		rcon:     wl,
+		players:  &playersCache{ttl: 10 * time.Second},
+		loc:      time.UTC,
+		log:      log,
+	}
+}
+
 func do(t *testing.T, h http.Handler, method, target, body string) (int, string) {
 	t.Helper()
 	var r *http.Request
@@ -191,23 +210,42 @@ func TestDashboardRequiresAuth(t *testing.T) {
 }
 
 func TestPlayersPublic(t *testing.T) {
-	wl := &stubWhitelist{players: OnlinePlayers{Online: 1, Max: 10, Names: []string{"msmborders"}}}
-	srv, _ := newTestServer(t, wl, nil)
-	h := srv.Handler()
+	wl := &stubWhitelist{players: OnlinePlayers{Online: 2, Max: 10, Names: []string{"msmborders", "Palu_Macil"}}}
+	h := newStatelessTestServer(t, wl).Handler()
 
-	// No auth: the online list is public so the landing page can embed it.
+	// No auth: the online list is public so the landing page can embed it. Each
+	// name renders as its own chip so it reads as a list, not a bare count.
 	code, body := do(t, h, http.MethodGet, "/invite/players", "")
 	require.Equal(t, http.StatusOK, code)
-	assert.Contains(t, body, "1 / 10")
-	assert.Contains(t, body, "msmborders")
+	assert.Contains(t, body, "2 / 10")
+	assert.Contains(t, body, `<span class="pchip">msmborders</span>`)
+	assert.Contains(t, body, `<span class="pchip">Palu_Macil</span>`)
+}
+
+func TestPlayersEmpty(t *testing.T) {
+	wl := &stubWhitelist{players: OnlinePlayers{Online: 0, Max: 10}}
+	h := newStatelessTestServer(t, wl).Handler()
+
+	code, body := do(t, h, http.MethodGet, "/invite/players", "")
+	require.Equal(t, http.StatusOK, code)
+	assert.Contains(t, body, "no one is on right now")
 }
 
 func TestPlayersUnavailable(t *testing.T) {
 	wl := &stubWhitelist{playersErr: errors.New("rcon down")}
-	srv, _ := newTestServer(t, wl, nil)
-	h := srv.Handler()
+	h := newStatelessTestServer(t, wl).Handler()
 
 	code, body := do(t, h, http.MethodGet, "/invite/players", "")
 	require.Equal(t, http.StatusOK, code)
 	assert.Contains(t, body, "unavailable")
+}
+
+func TestWhoamiSignedOut(t *testing.T) {
+	h := newStatelessTestServer(t, &stubWhitelist{}).Handler()
+
+	// The landing page calls this with no session; it must report signed-out so
+	// the "Sign in" link stays put rather than erroring.
+	code, body := do(t, h, http.MethodGet, "/invite/whoami", "")
+	require.Equal(t, http.StatusOK, code)
+	assert.Contains(t, body, `"signedIn":false`)
 }

@@ -87,6 +87,17 @@ in `deploy/base` to the new version in the same commit you tag; otherwise
 ArgoCD keeps deploying the old image. Tag first so the image exists before
 the `?ref=` bump lands.
 
+**Does a release restart the game server? No, not by itself.** A web or
+portal release rolls only the `mc-web` and `mc-invite` Deployments. The
+game server is the `mc` StatefulSet (`mc-0`), and Kubernetes restarts it
+only when its own pod spec changes (an env var, the pack pin, a volume
+mount, or the BlueMap `/config` ConfigMap it mounts). A `?ref=` bump that
+moves only the two image tags leaves the StatefulSet manifest
+byte-identical, so `mc-0` keeps running and players stay connected
+(verified: the v0.4.0 cutover did not restart `mc-0`). Only a `deploy/base`
+change that alters the StatefulSet, or a pack upgrade, restarts the game
+server; gate those on an empty server.
+
 ## Phase status
 
 - Phase 1 (game server): shipped 2026-07.

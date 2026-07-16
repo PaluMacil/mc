@@ -28,7 +28,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: mc-web
-          image: ghcr.io/palumacil/mc-web:v0.4.0
+          image: ghcr.io/palumacil/mc-web:v0.4.1
           args: ["-listen=:8080"]
           ports:
             - name: http

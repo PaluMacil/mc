@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Player tips: getting started with modded Minecraft and ATM10</title>
+<meta name="description" content="Getting-started tips for players new to heavily modded Minecraft, plus All the Mods 10 specifics and how chunk loading keeps your farms running.">
+<style>
+  :root {
+    --bg:#14161a; --panel:#1e2128; --panel2:#262a33; --text:#e8eaed; --muted:#a7adba;
+    --accent:#5db462; --accent2:#7fd884; --border:#333844; --code:#0f1115;
+    --warn-bg:#3a2c14; --warn-border:#7a5a1e; --warn-text:#f4d58b;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg:#f4f6f8; --panel:#fff; --panel2:#eef1f5; --text:#1b1e24; --muted:#566072;
+      --accent:#2f8f43; --accent2:#257035; --border:#d7dde5; --code:#eef1f5;
+      --warn-bg:#fff5db; --warn-border:#e2b657; --warn-text:#6b4e12;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text);
+    font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
+  .wrap { max-width:760px; margin:0 auto; padding:2rem 1.1rem 4rem; }
+  a { color:var(--accent2); }
+  .topnav { display:flex; gap:1.1rem; flex-wrap:wrap; padding:0.2rem 0 1.4rem; }
+  .topnav a { color:var(--muted); text-decoration:none; font-weight:600; }
+  .topnav a:hover { color:var(--text); }
+  .topnav a.signedin { color:var(--accent2); }
+  h1 { font-size:1.8rem; margin:0.3rem 0 0.4rem; }
+  h2 { font-size:1.3rem; margin:2.2rem 0 0.6rem; }
+  h3 { font-size:1.05rem; margin:1.2rem 0 0.2rem; }
+  p.lead { color:var(--muted); margin-top:0; }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:1.1rem 1.3rem; margin:1.1rem 0; }
+  code { font-family:ui-monospace,Menlo,Consolas,monospace; background:var(--code);
+    border:1px solid var(--border); border-radius:5px; padding:0.05rem 0.35rem; }
+  ul, ol { padding-left:1.3rem; }
+  li { margin:0.4rem 0; }
+  .muted { color:var(--muted); }
+  .em { color:var(--accent2); font-weight:600; }
+  .video { display:flex; gap:1rem; align-items:center; flex-wrap:wrap;
+    background:var(--panel); border:1px solid var(--border); border-left:4px solid var(--accent);
+    border-radius:12px; padding:1.1rem 1.3rem; margin:1.2rem 0; }
+  .video .vtext { flex:1; min-width:15rem; }
+  .video h3 { margin:0 0 0.2rem; }
+  .video p { margin:0; color:var(--muted); font-size:0.95rem; }
+  .btn { display:inline-block; text-decoration:none; font-weight:600; white-space:nowrap;
+    border-radius:9px; padding:0.6rem 1rem; background:var(--accent); color:#06210b; border:0; }
+  .btn:hover { background:var(--accent2); }
+  footer { text-align:center; color:var(--muted); font-size:0.9rem; margin-top:3rem; }
+  footer a { color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  {{template "topnav" .}}
+
+  <h1>Player tips: modded Minecraft and All the Mods 10</h1>
+  <p class="lead">All the Mods 10 adds hundreds of mods on top of Minecraft, so the first hour can feel
+  overwhelming. It is not as complicated as it looks. Here is how to get comfortable, avoid the common
+  beginner frustrations, and be a good neighbour on a small shared server.</p>
+
+  <h2>New to heavily modded Minecraft?</h2>
+  <div class="card">
+    <ul>
+      <li><span class="em">Let it load, and give it memory.</span> The first launch is slow while all
+      the mods load; that is normal, so wait it out rather than force-quitting. If the game stutters or
+      crashes, raise the allocated memory in CurseForge (about 8 GB on a 16 GB computer). Too little
+      memory is the number one cause of trouble.</li>
+      <li><span class="em">Learn JEI first.</span> The searchable list of items down the right side of
+      your inventory is <span class="em">Just Enough Items</span>. Hover an item and press
+      <code>R</code> to see how to craft it, or <code>U</code> to see what it is used for. With
+      thousands of new items, JEI is the tool you will use most; you rarely need a wiki.</li>
+      <li><span class="em">Follow the quest book.</span> ATM10 ships an in-game guide (FTB Quests). Open
+      it and work through the opening chapters: it is the intended tutorial, points you at good starter
+      mods, and hands out free rewards along the way.</li>
+      <li><span class="em">Go deep, not wide.</span> You cannot learn every mod at once, and trying to
+      is where people burn out. Get the basics sorted (food, a shelter, a few tools), then pick
+      <span class="em">one</span> mod that looks fun and follow it a good way before branching out.</li>
+      <li><span class="em">Set up fast travel early.</span> Modded worlds get big and you will wander
+      far. Waystones and similar blocks let you teleport back home, so you do not lose your base.</li>
+      <li><span class="em">Grab what a recipe needs.</span> There is a tempting amount of loot. Take
+      what the next craft calls for; you will automate the bulk gathering later, so you do not need to
+      hoard everything by hand now.</li>
+    </ul>
+  </div>
+
+  <h2>All the Mods 10 specifics</h2>
+  <div class="card">
+    <ul>
+      <li><span class="em">There is no fixed story.</span> ATM packs are "kitchen sink": a bit of
+      everything, and you choose your own path. The classic long-term goal is crafting the
+      <span class="em">ATM Star</span>, a very expensive endgame item that needs a taste of nearly every
+      mod. Use the quest book as your roadmap toward it, but play however you enjoy.</li>
+      <li><span class="em">Get a power source going.</span> Most early progression leads into a tech
+      mod for power (Mekanism, Powah, and similar are popular). The quest chapters walk you into one; you
+      do not have to decide up front.</li>
+      <li><span class="em">If it runs rough, turn things down.</span> Lower your render and simulation
+      distance to around 8 to 12 chunks and cap your frame rate. Modded Minecraft leans on your CPU, and
+      a smaller view distance helps far more than most other settings.</li>
+      <li><span class="em">Only update when the server does.</span> Keep the pack on version
+      {{.PackVersion}} until the server announces a change, the same as the connect guide says. Updating
+      early will stop you connecting.</li>
+    </ul>
+  </div>
+
+  <h2>Chunk loading: why your farms stop when you log off</h2>
+  <p>Minecraft only runs the part of the world close to a player. When you walk far away or log off, those
+  areas <span class="em">freeze</span>: your farms, machines, and mob spawners all pause until someone is
+  nearby again. That surprises a lot of new players who come back to find nothing has grown.</p>
+  <p>A <span class="em">chunk loader</span> keeps the chunks you choose running even when no one is there,
+  so automated farms and processing keep working while you are away. ATM10 includes
+  <span class="em">FTB Chunks</span> for this: open its map, claim the area around your base, and mark the
+  chunks that hold your farms as force-loaded. You get a limited number of force-loaded chunks, so spend
+  them on what actually needs to keep ticking.</p>
+
+  <div class="video">
+    <div class="vtext">
+      <h3>Watch: how chunk loading works</h3>
+      <p>A short walkthrough of what chunk loading is and how to keep your farms and machines running
+      when you are offline.</p>
+    </div>
+    <a class="btn" href="https://www.youtube.com/watch?v=AHpYBhbPk80" target="_blank" rel="noopener">Watch on YouTube</a>
+  </div>
+
+  <div class="card">
+    <p><span class="em">Be considerate with it.</span> Every force-loaded chunk is work the server keeps
+    doing around the clock, even when you are asleep. On a small server like this one, over-loading chunks
+    (claiming and force-loading big areas you do not need) is the most common cause of lag for everyone.
+    Load your base and your working farms; leave the rest to load normally when you are there.</p>
+  </div>
+
+  <footer>
+    <p><a href="/">Back to the main page</a> &middot; connection or ping trouble? See the
+    <a href="{{.ParentsPath}}">parent tips</a> &middot; questions? Ask Dan.</p>
+  </footer>
+
+</div>
+{{template "authscript" .}}
+</body>
+</html>

@@ -1,8 +1,13 @@
 // Command mc-web serves the mc.danwolf.net public pages: the landing page (how
 // to connect, a link to the live BlueMap, a live "who's online" widget, the
-// rules, and a setup guide for the parents of the 7 to 13 year old players) and
-// a parental-controls tips page. Everything (templates and the version-select
-// screenshot) is embedded, so the binary is the whole site.
+// rules, and a setup guide for the parents of the 7 to 13 year old players), a
+// player tips page (getting started with heavily modded Minecraft and ATM10),
+// and a parental-controls tips page. Everything (templates and the
+// version-select screenshot) is embedded, so the binary is the whole site.
+//
+// The pages are static, but they call two same-origin portal endpoints from the
+// browser: /portal/players for the live online list, and /portal/whoami so the
+// "Sign in" nav link becomes the member's name once they are signed in.
 //
 // The pack version and addresses are flags with sane defaults so a pack upgrade
 // is a one-line change here (and the screenshot swap), per the upgrade runbook.
@@ -33,7 +38,9 @@ type pageData struct {
 	MapPath         string
 	PortalPath      string
 	ParentsPath     string
+	TipsPath        string
 	PlayersURL      string
+	WhoamiURL       string
 	Year            int
 }
 
@@ -45,7 +52,9 @@ func main() {
 	mapPath := flag.String("map-path", "/map/", "path the live BlueMap is served under (trailing slash matters)")
 	portalPath := flag.String("portal-path", "/portal/", "path the member portal (sign in, invites) is served under")
 	parentsPath := flag.String("parents-path", "/parents", "path of the parental-controls tips page")
+	tipsPath := flag.String("tips-path", "/tips", "path of the player tips page")
 	playersURL := flag.String("players-url", "/portal/players", "same-origin endpoint returning the online-players fragment")
+	whoamiURL := flag.String("whoami-url", "/portal/whoami", "same-origin endpoint reporting the visitor's sign-in state")
 	flag.Parse()
 
 	data := pageData{
@@ -55,13 +64,16 @@ func main() {
 		MapPath:         *mapPath,
 		PortalPath:      *portalPath,
 		ParentsPath:     *parentsPath,
+		TipsPath:        *tipsPath,
 		PlayersURL:      *playersURL,
+		WhoamiURL:       *whoamiURL,
 		Year:            time.Now().Year(),
 	}
 
 	tmpl := template.Must(template.ParseFS(templatesFS, "templates/*.tmpl"))
 	index := renderPage(tmpl, "index.html.tmpl", data)
 	parents := renderPage(tmpl, "parents.html.tmpl", data)
+	tips := renderPage(tmpl, "tips.html.tmpl", data)
 
 	mux := http.NewServeMux()
 
@@ -74,6 +86,7 @@ func main() {
 	})
 
 	mux.HandleFunc(strings.TrimRight(*parentsPath, "/"), servePage(parents))
+	mux.HandleFunc(strings.TrimRight(*tipsPath, "/"), servePage(tips))
 
 	// Landing page. Only the exact root renders it; anything else under
 	// mc-web's / route that is not a more specific match is a genuine 404.

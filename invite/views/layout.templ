@@ -124,7 +124,9 @@ templ styles() {
 		.dot { width:0.6rem; height:0.6rem; border-radius:50%; background:var(--accent); display:inline-block; }
 		.dot.off { background:var(--muted); }
 		.pcount { font-weight:700; }
-		.pnames { color:var(--muted); }
+		.pnames { color:var(--muted); display:flex; gap:0.35rem; flex-wrap:wrap; align-items:center; }
+		.pchip { background:var(--panel2); border:1px solid var(--border); color:var(--text);
+			border-radius:999px; padding:0.05rem 0.55rem; font-size:0.85rem; }
 		.statusbar .maplink { margin-left:auto; }
 		.cancelbtn { font:inherit; font-size:0.82rem; cursor:pointer; background:none;
 			border:1px solid var(--border); color:var(--danger); border-radius:6px; padding:0.2rem 0.5rem; }
