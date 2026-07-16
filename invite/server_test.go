@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -18,9 +19,11 @@ import (
 )
 
 type stubWhitelist struct {
-	resp  string
-	err   error
-	calls atomic.Int32
+	resp       string
+	err        error
+	calls      atomic.Int32
+	players    OnlinePlayers
+	playersErr error
 }
 
 func (s *stubWhitelist) WhitelistAdd(_ context.Context, _ string) (string, error) {
@@ -28,9 +31,13 @@ func (s *stubWhitelist) WhitelistAdd(_ context.Context, _ string) (string, error
 	return s.resp, s.err
 }
 
+func (s *stubWhitelist) ListPlayers(_ context.Context) (OnlinePlayers, error) {
+	return s.players, s.playersErr
+}
+
 // newTestServer wires a Server against the test Postgres with a stubbed Mojang
-// (only knownName resolves) and a stubbed whitelist grant.
-func newTestServer(t *testing.T, wl whitelistAdder, limiter *ipLimiter) (*Server, *Store) {
+// (only knownName resolves) and a stubbed RCON.
+func newTestServer(t *testing.T, wl minecraftRCON, limiter *ipLimiter) (*Server, *Store) {
 	t.Helper()
 	store := newTestStore(t)
 
@@ -56,15 +63,16 @@ func newTestServer(t *testing.T, wl whitelistAdder, limiter *ipLimiter) (*Server
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	return &Server{
-		cfg:       cfg,
-		store:     store,
-		auth:      &Auth{cfg: cfg, sessions: sessions, log: log},
-		sessions:  sessions,
-		mojang:    MojangResolver{BaseURL: mojang.URL, Client: mojang.Client()},
-		whitelist: wl,
-		limiter:   limiter,
-		loc:       time.UTC,
-		log:       log,
+		cfg:      cfg,
+		store:    store,
+		auth:     &Auth{cfg: cfg, sessions: sessions, log: log},
+		sessions: sessions,
+		mojang:   MojangResolver{BaseURL: mojang.URL, Client: mojang.Client()},
+		rcon:     wl,
+		players:  &playersCache{ttl: 10 * time.Second},
+		limiter:  limiter,
+		loc:      time.UTC,
+		log:      log,
 	}, store
 }
 
@@ -102,7 +110,7 @@ func TestRedeemFlowEndToEnd(t *testing.T) {
 	ctx := context.Background()
 
 	raw, hash := newToken()
-	_, err := store.CreateInvite(ctx, hash, "oidc-sub-alice", time.Hour)
+	_, err := store.CreateInvite(ctx, hash, "oidc-sub-alice", "Alice", time.Hour)
 	require.NoError(t, err)
 
 	// The form renders for a valid, unused link.
@@ -148,7 +156,7 @@ func TestRedeemUnknownName(t *testing.T) {
 	h := srv.Handler()
 
 	raw, hash := newToken()
-	_, err := store.CreateInvite(context.Background(), hash, "oidc-sub-alice", time.Hour)
+	_, err := store.CreateInvite(context.Background(), hash, "oidc-sub-alice", "Alice", time.Hour)
 	require.NoError(t, err)
 
 	code, body := do(t, h, http.MethodPost, "/invite/i/"+raw, "username=NoSuchPlayer")
@@ -163,7 +171,7 @@ func TestRedeemRateLimited(t *testing.T) {
 	h := srv.Handler()
 
 	raw, hash := newToken()
-	_, err := store.CreateInvite(context.Background(), hash, "oidc-sub-alice", time.Hour)
+	_, err := store.CreateInvite(context.Background(), hash, "oidc-sub-alice", "Alice", time.Hour)
 	require.NoError(t, err)
 
 	// First POST consumes the only token (unknown name, so the invite survives).
@@ -180,4 +188,26 @@ func TestDashboardRequiresAuth(t *testing.T) {
 
 	code, _ := do(t, h, http.MethodGet, "/invite/", "")
 	require.Equal(t, http.StatusFound, code, "unauthenticated dashboard redirects")
+}
+
+func TestPlayersPublic(t *testing.T) {
+	wl := &stubWhitelist{players: OnlinePlayers{Online: 1, Max: 10, Names: []string{"msmborders"}}}
+	srv, _ := newTestServer(t, wl, nil)
+	h := srv.Handler()
+
+	// No auth: the online list is public so the landing page can embed it.
+	code, body := do(t, h, http.MethodGet, "/invite/players", "")
+	require.Equal(t, http.StatusOK, code)
+	assert.Contains(t, body, "1 / 10")
+	assert.Contains(t, body, "msmborders")
+}
+
+func TestPlayersUnavailable(t *testing.T) {
+	wl := &stubWhitelist{playersErr: errors.New("rcon down")}
+	srv, _ := newTestServer(t, wl, nil)
+	h := srv.Handler()
+
+	code, body := do(t, h, http.MethodGet, "/invite/players", "")
+	require.Equal(t, http.StatusOK, code)
+	assert.Contains(t, body, "unavailable")
 }

@@ -26,13 +26,13 @@ Repo paths below are in the sibling `homelab` repo unless noted.
 ## 1. Build and publish the images
 
 1. Cut a tag in **this** repo (the image tags in `deploy/base` must match
-   the tag you push; they are currently `v0.3.1`):
+   the tag you push; they are currently `v0.4.0`):
    ```sh
-   git tag v0.3.1 && git push origin v0.3.1
+   git tag v0.4.0 && git push origin v0.4.0
    ```
    CI (`.github/workflows/ci.yml`) tests both apps and pushes
-   `ghcr.io/palumacil/mc-web:v0.3.1` and
-   `ghcr.io/palumacil/mc-invite:v0.3.1`.
+   `ghcr.io/palumacil/mc-web:v0.4.0` and
+   `ghcr.io/palumacil/mc-invite:v0.4.0`.
 2. **Make both ghcr packages public** the first time (GitHub, Packages,
    each package, Package settings, Change visibility, Public). The base
    references them without a pull secret; public is the simplest path and
@@ -152,7 +152,7 @@ startup, so no migration job is needed.
 
 ## 5. Bump the pin (already committed in homelab)
 
-The `?ref=` pin in `workloads/mc/kustomization.yaml` is bumped to `v0.3.1`
+The `?ref=` pin in `workloads/mc/kustomization.yaml` is bumped to `v0.4.0`
 and pushed alongside the `minecraft` ExternalSecret and CNPG Database/role.
 ArgoCD applies the base and overlay together. Order is forgiving: if a
 Secret is not yet present the pod waits and starts on its own once ESO

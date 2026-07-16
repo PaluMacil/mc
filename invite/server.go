@@ -1,12 +1,16 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/PaluMacil/mc/invite/views"
@@ -17,23 +21,25 @@ import (
 //go:embed assets/htmx.min.js
 var htmxJS []byte
 
-// whitelistAdder grants a player access over RCON. It is an interface at the
-// consumer so tests can substitute a stub for the real *RCONClient.
-type whitelistAdder interface {
+// minecraftRCON is the server's view of RCON: grant whitelist access and read
+// who is online. It is an interface at the consumer so tests can stub it.
+type minecraftRCON interface {
 	WhitelistAdd(ctx context.Context, name string) (string, error)
+	ListPlayers(ctx context.Context) (OnlinePlayers, error)
 }
 
 // Server holds the wired dependencies and serves the app.
 type Server struct {
-	cfg       Config
-	store     *Store
-	auth      *Auth
-	sessions  *scs.SessionManager
-	mojang    MojangResolver
-	whitelist whitelistAdder
-	limiter   *ipLimiter
-	loc       *time.Location
-	log       *slog.Logger
+	cfg      Config
+	store    *Store
+	auth     *Auth
+	sessions *scs.SessionManager
+	mojang   MojangResolver
+	rcon     minecraftRCON
+	players  *playersCache
+	limiter  *ipLimiter
+	loc      *time.Location
+	log      *slog.Logger
 }
 
 // Handler builds the routed, session-wrapped, CSRF-protected handler. Routes for
@@ -64,12 +70,16 @@ func (s *Server) Handler() http.Handler {
 		w.Write(htmxJS)
 	})
 
+	// Public: who is online. Not behind login, so the landing page can embed it.
+	mux.HandleFunc("GET "+base+"/players", s.playersHandler)
+
 	// Inviter/admin dashboard.
 	mux.HandleFunc("GET "+base+"/{$}", s.auth.requireAuth(s.home))
 	mux.HandleFunc("GET "+base+"/login", s.auth.Login)
 	mux.HandleFunc("GET "+base+"/auth/callback", s.auth.Callback)
 	mux.HandleFunc("POST "+base+"/logout", s.auth.Logout)
 	mux.HandleFunc("POST "+base+"/invites", s.auth.requireRole("inviter", s.mint))
+	mux.HandleFunc("POST "+base+"/invites/{id}/cancel", s.auth.requireRole("inviter", s.cancelInvite))
 
 	// Public redemption.
 	mux.HandleFunc("GET "+base+"/i/{token}", s.redeemForm)
@@ -83,8 +93,8 @@ func (s *Server) Handler() http.Handler {
 	}
 
 	// Sessions wrap everything; CSRF (Sec-Fetch-Site based) guards unsafe
-	// methods. Same-origin form posts (mint, logout, redeem) pass; the only
-	// cross-site entry, the OIDC callback, is a GET and is not checked.
+	// methods. Same-origin form posts (mint, cancel, logout, redeem) pass; the
+	// only cross-site entry, the OIDC callback, is a GET and is not checked.
 	csrf := http.NewCrossOriginProtection()
 	return csrf.Handler(s.sessions.LoadAndSave(mux))
 }
@@ -112,13 +122,14 @@ func (s *Server) home(w http.ResponseWriter, r *http.Request) {
 	}
 
 	vm := views.HomeVM{
-		Nav:       s.nav(u, false),
-		CanMint:   u.IsInviter(),
-		MintURL:   s.cfg.BasePath + "/invites",
-		AdminView: u.IsAdmin(),
-		ShowAll:   showAll,
-		ShowOwner: showAll,
-		Invites:   s.inviteRows(invites, showAll),
+		Nav:        s.nav(u, false),
+		PlayersURL: s.cfg.BasePath + "/players",
+		CanMint:    u.IsInviter(),
+		MintURL:    s.cfg.BasePath + "/invites",
+		AdminView:  u.IsAdmin(),
+		ShowAll:    showAll,
+		ShowOwner:  showAll,
+		Invites:    s.inviteRows(invites, u, showAll),
 	}
 	if showAll {
 		vm.ToggleURL = s.cfg.BasePath + "/"
@@ -142,18 +153,69 @@ func (s *Server) mint(w http.ResponseWriter, r *http.Request) {
 	u := userFrom(ctx)
 
 	raw, hash := newToken()
-	inv, err := s.store.CreateInvite(ctx, hash, u.Subject, s.cfg.InviteTTL)
+	inv, err := s.store.CreateInvite(ctx, hash, u.Subject, u.DisplayName(), s.cfg.InviteTTL)
 	if err != nil {
 		s.serverError(w, "creating invite", err)
 		return
 	}
-	s.log.Info("invite minted", "by", u.Subject, "invite_id", inv.ID)
+	s.log.Info("invite minted", "by", u.DisplayName(), "invite_id", inv.ID)
 
 	link := strings.TrimRight(s.cfg.BaseURL.String(), "/") + "/i/" + raw
 	s.render(w, r, views.MintResult(views.MintedVM{
 		Link:      link,
 		ExpiresAt: s.fmtTime(inv.ExpiresAt),
 	}))
+}
+
+// cancelInvite revokes an unused invite and returns the updated table row so
+// htmx can swap it in place. The `owner` query flag tells us whether the row is
+// rendered with the "created by" column (admin all-invites view).
+func (s *Server) cancelInvite(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	u := userFrom(ctx)
+
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		http.Error(w, "bad invite id", http.StatusBadRequest)
+		return
+	}
+
+	inv, err := s.store.CancelInvite(ctx, id, u.Subject, u.DisplayName(), u.IsAdmin())
+	switch {
+	case errors.Is(err, ErrInviteNotFound):
+		http.Error(w, "invite not found", http.StatusNotFound)
+		return
+	case errors.Is(err, ErrForbidden):
+		http.Error(w, "you can only cancel your own invites", http.StatusForbidden)
+		return
+	case errors.Is(err, ErrInviteUsed):
+		http.Error(w, "that invite was already used", http.StatusConflict)
+		return
+	case err != nil:
+		s.serverError(w, "canceling invite", err)
+		return
+	}
+	s.log.Info("invite canceled", "by", u.DisplayName(), "invite_id", id)
+
+	showOwner := r.URL.Query().Get("owner") == "1"
+	s.render(w, r, views.InviteRow(s.inviteRow(inv, u, showOwner)))
+}
+
+// playersHandler returns the online-players fragment (public, cached).
+func (s *Server) playersHandler(w http.ResponseWriter, r *http.Request) {
+	vm := views.PlayersVM{MapURL: s.cfg.MapURL}
+	op, err := s.players.get(r.Context(), s.rcon.ListPlayers)
+	if err != nil {
+		s.log.Debug("player list unavailable", "err", err)
+	} else {
+		vm.Available = true
+		vm.Online = op.Online
+		vm.Max = op.Max
+		vm.NamesText = strings.Join(op.Names, ", ")
+	}
+	// Short client cache so many pollers do not each hit the app.
+	w.Header().Set("Cache-Control", "public, max-age=10")
+	s.render(w, r, views.Players(vm))
 }
 
 func (s *Server) redeemForm(w http.ResponseWriter, r *http.Request) {
@@ -202,7 +264,7 @@ func (s *Server) redeem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp, err := s.store.RedeemInvite(ctx, hashToken(token), profile, func(ctx context.Context) (string, error) {
-		return s.whitelist.WhitelistAdd(ctx, profile.Name)
+		return s.rcon.WhitelistAdd(ctx, profile.Name)
 	})
 	switch {
 	case errors.Is(err, ErrInviteNotFound):
@@ -210,6 +272,9 @@ func (s *Server) redeem(w http.ResponseWriter, r *http.Request) {
 		return
 	case errors.Is(err, ErrInviteUsed):
 		s.renderState(w, r, "used", submitURL)
+		return
+	case errors.Is(err, ErrInviteCanceled):
+		s.renderState(w, r, "canceled", submitURL)
 		return
 	case errors.Is(err, ErrInviteExpired):
 		s.renderState(w, r, "expired", submitURL)
@@ -246,11 +311,9 @@ func (s *Server) inviteState(ctx context.Context, token string) string {
 		s.log.Warn("finding invite", "err", err)
 		return "invalid"
 	}
-	switch inv.Status(time.Now()) {
-	case "used":
-		return "used"
-	case "expired":
-		return "expired"
+	switch st := inv.Status(time.Now()); st {
+	case "used", "canceled", "expired":
+		return st
 	default:
 		return "form"
 	}
@@ -259,52 +322,90 @@ func (s *Server) inviteState(ctx context.Context, token string) string {
 func (s *Server) nav(u User, public bool) views.NavVM {
 	base := s.cfg.BasePath
 	n := views.NavVM{
-		HomeURL:   base + "/",
-		LoginURL:  base + "/login",
-		LogoutURL: base + "/logout",
-		HideAuth:  public,
+		HomeURL:    base + "/",
+		LoginURL:   base + "/login",
+		LogoutURL:  base + "/logout",
+		LandingURL: s.cfg.SiteURL,
+		MapURL:     s.cfg.MapURL,
+		HideAuth:   public,
 	}
 	if !public {
 		n.HtmxSrc = base + "/assets/htmx.min.js"
 	}
 	if u.Subject != "" {
 		n.SignedIn = true
-		n.Email = u.Email
+		n.Name = u.DisplayName()
 		n.IsAdmin = u.IsAdmin()
 		n.IsInviter = u.IsInviter()
 	}
 	return n
 }
 
-func (s *Server) inviteRows(invites []Invite, withOwner bool) []views.InviteRowVM {
-	now := time.Now()
+func (s *Server) inviteRows(invites []Invite, u User, showOwner bool) []views.InviteRowVM {
 	rows := make([]views.InviteRowVM, 0, len(invites))
 	for _, inv := range invites {
-		row := views.InviteRowVM{
-			CreatedAt:     s.fmtTime(inv.CreatedAt),
-			ExpiresAt:     s.fmtTime(inv.ExpiresAt),
-			Status:        inv.Status(now),
-			MinecraftName: inv.MinecraftName,
-		}
-		if withOwner {
-			row.CreatedBy = inv.CreatedBy
-		}
-		rows = append(rows, row)
+		rows = append(rows, s.inviteRow(inv, u, showOwner))
 	}
 	return rows
+}
+
+func (s *Server) inviteRow(inv Invite, u User, showOwner bool) views.InviteRowVM {
+	canCancel := inv.Cancelable() && (u.IsAdmin() || inv.CreatedBy == u.Subject)
+	row := views.InviteRowVM{
+		CreatedAt:     s.fmtTime(inv.CreatedAt),
+		ExpiresAt:     s.fmtTime(inv.ExpiresAt),
+		Status:        inv.Status(time.Now()),
+		MinecraftName: inv.MinecraftName,
+		ShowOwner:     showOwner,
+		CanCancel:     canCancel,
+	}
+	if showOwner {
+		row.CreatedBy = cmp.Or(inv.CreatedByName, inv.CreatedBy)
+	}
+	if canCancel {
+		u := s.cfg.BasePath + "/invites/" + strconv.FormatInt(inv.ID, 10) + "/cancel"
+		if showOwner {
+			u += "?owner=1"
+		}
+		row.CancelURL = u
+	}
+	return row
 }
 
 func (s *Server) auditRows(entries []AuditEntry) []views.AuditRowVM {
 	rows := make([]views.AuditRowVM, 0, len(entries))
 	for _, e := range entries {
+		action, detail := s.friendlyAudit(e)
 		rows = append(rows, views.AuditRowVM{
 			At:     s.fmtTime(e.At),
-			Actor:  e.Actor,
-			Action: e.Action,
-			Detail: string(e.Detail),
+			Who:    cmp.Or(e.ActorName, e.Actor),
+			Action: action,
+			Detail: detail,
 		})
 	}
 	return rows
+}
+
+// friendlyAudit turns a raw audit row into a human action + detail string.
+func (s *Server) friendlyAudit(e AuditEntry) (action, detail string) {
+	var d map[string]any
+	_ = json.Unmarshal(e.Detail, &d)
+	switch e.Action {
+	case "invite_created":
+		if exp, ok := d["expires_at"].(string); ok {
+			if t, err := time.Parse(time.RFC3339, exp); err == nil {
+				return "Created an invite", "expires " + s.fmtTime(t)
+			}
+		}
+		return "Created an invite", ""
+	case "invite_redeemed":
+		name, _ := d["minecraft_name"].(string)
+		return "Joined the whitelist", name
+	case "invite_canceled":
+		return "Canceled an invite", ""
+	default:
+		return e.Action, string(e.Detail)
+	}
 }
 
 func (s *Server) fmtTime(t time.Time) string {
@@ -321,4 +422,25 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, c templ.Componen
 func (s *Server) serverError(w http.ResponseWriter, what string, err error) {
 	s.log.Error(what, "err", err)
 	http.Error(w, "Something went wrong. Please try again.", http.StatusInternalServerError)
+}
+
+// playersCache serializes and caches the RCON `list` result so many pollers do
+// not each trigger an RCON round-trip.
+type playersCache struct {
+	mu        sync.Mutex
+	ttl       time.Duration
+	result    OnlinePlayers
+	err       error
+	fetchedAt time.Time
+}
+
+func (c *playersCache) get(ctx context.Context, fetch func(context.Context) (OnlinePlayers, error)) (OnlinePlayers, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if !c.fetchedAt.IsZero() && time.Since(c.fetchedAt) < c.ttl {
+		return c.result, c.err
+	}
+	c.result, c.err = fetch(ctx)
+	c.fetchedAt = time.Now()
+	return c.result, c.err
 }

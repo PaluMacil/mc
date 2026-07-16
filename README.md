@@ -330,8 +330,11 @@ check, image build, pin bump) is in `DEPLOY-PHASES-2-3.md`.
   Cloudflare's edge): `/` to `mc-web`, `/map` to `mc-map` (prefix
   stripped), `/portal` to the Phase 3 app. `mc.danwolf.net` is already a
   proxied CNAME to the cluster tunnel.
-- **Planned**: a live online-player list on the landing page (from the
-  server's status ping or RCON), so you can see who is on without joining.
+- **Live online-player count** on the landing page, fetched from the
+  portal's public `/portal/players` fragment (RCON `list`), so anyone can
+  see who is on without joining; the map and this count are not behind
+  login. A `/parents` page explains configuring parental controls
+  (Qustodio in particular) so they do not block or slow the game.
 
 ## Phase 3: member portal (invites and sign-up)
 
@@ -355,6 +358,11 @@ enrollment, Postgres database, secrets) is in `DEPLOY-PHASES-2-3.md`.
   signed-in user with neither role is a guest (self-registered into
   `mc-guest` via the Authentik enrollment flow) and sees a "pending" page
   until an admin promotes them, which is how new users get onboarded.
+- **Dashboard**: an online-players strip, the mint button, and an invites
+  table where an inviter can **cancel** their own unused links (admins can
+  cancel anyone's; cancellation is a soft revoke, audited, and blocks
+  redemption). Names come from the OIDC `name`/`preferred_username` claim,
+  so "created by" and the admin activity log read as people, not subjects.
 - **Flow**: an inviter signs in and mints a single-use link with a 7 day
   expiry (`INVITE_TTL`). The invitee (who signs in to nothing) opens the
   link and types their Minecraft Java username. The app resolves it to a

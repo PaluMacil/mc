@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	"crypto/rand"
 	"encoding/base64"
@@ -22,6 +23,7 @@ const (
 	sessReturnTo = "return_to"
 	sessSubject  = "user_subject"
 	sessEmail    = "user_email"
+	sessName     = "user_name"  // display name (full name, else username, else email)
 	sessRoles    = "user_roles" // comma-joined role list
 )
 
@@ -33,6 +35,7 @@ const userCtxKey ctxKey = 0
 type User struct {
 	Subject string
 	Email   string
+	Name    string // display name for audit and "created by"
 	roles   map[string]bool
 }
 
@@ -146,8 +149,10 @@ func (a *Auth) Callback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var claims struct {
-		Email  string   `json:"email"`
-		Groups []string `json:"groups"`
+		Email             string   `json:"email"`
+		Name              string   `json:"name"`
+		PreferredUsername string   `json:"preferred_username"`
+		Groups            []string `json:"groups"`
 	}
 	if err := idToken.Claims(&claims); err != nil {
 		a.log.Warn("reading id token claims", "err", err)
@@ -161,17 +166,23 @@ func (a *Auth) Callback(w http.ResponseWriter, r *http.Request) {
 	if len(groups) == 0 {
 		if ui, err := a.provider.UserInfo(ctx, oauth2.StaticTokenSource(token)); err == nil {
 			var uc struct {
-				Email  string   `json:"email"`
-				Groups []string `json:"groups"`
+				Email             string   `json:"email"`
+				Name              string   `json:"name"`
+				PreferredUsername string   `json:"preferred_username"`
+				Groups            []string `json:"groups"`
 			}
 			if err := ui.Claims(&uc); err == nil {
 				groups = uc.Groups
-				if claims.Email == "" {
-					claims.Email = uc.Email
-				}
+				claims.Email = cmp.Or(claims.Email, uc.Email)
+				claims.Name = cmp.Or(claims.Name, uc.Name)
+				claims.PreferredUsername = cmp.Or(claims.PreferredUsername, uc.PreferredUsername)
 			}
 		}
 	}
+
+	// A human-readable name for "created by" and the audit log: full name, else
+	// username, else email, else the opaque subject as a last resort.
+	displayName := cmp.Or(claims.Name, claims.PreferredUsername, claims.Email, idToken.Subject)
 
 	// A user with no admin/inviter role is a guest: someone who self-registered
 	// (Authentik enrollment lands them in mc-guest) but has not been granted
@@ -191,6 +202,7 @@ func (a *Auth) Callback(w http.ResponseWriter, r *http.Request) {
 	}
 	a.sessions.Put(ctx, sessSubject, idToken.Subject)
 	a.sessions.Put(ctx, sessEmail, claims.Email)
+	a.sessions.Put(ctx, sessName, displayName)
 	a.sessions.Put(ctx, sessRoles, strings.Join(roles, ","))
 	a.sessions.Remove(ctx, sessState)
 	a.sessions.Remove(ctx, sessPKCE)
@@ -223,7 +235,17 @@ func (a *Auth) currentUser(ctx context.Context) (User, bool) {
 			roles[r] = true
 		}
 	}
-	return User{Subject: sub, Email: a.sessions.GetString(ctx, sessEmail), roles: roles}, true
+	return User{
+		Subject: sub,
+		Email:   a.sessions.GetString(ctx, sessEmail),
+		Name:    a.sessions.GetString(ctx, sessName),
+		roles:   roles,
+	}, true
+}
+
+// DisplayName is the user's name, falling back to email then subject.
+func (u User) DisplayName() string {
+	return cmp.Or(u.Name, u.Email, u.Subject)
 }
 
 // requireAuth admits signed-in users, attaching the User to the context, and

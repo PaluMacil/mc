@@ -46,7 +46,7 @@ func TestRedeemHappyPath(t *testing.T) {
 	ctx := context.Background()
 
 	_, hash := newToken()
-	inv, err := s.CreateInvite(ctx, hash, "oidc-sub-alice", time.Hour)
+	inv, err := s.CreateInvite(ctx, hash, "oidc-sub-alice", "Alice", time.Hour)
 	require.NoError(t, err)
 	require.NotZero(t, inv.ID)
 
@@ -86,7 +86,7 @@ func TestRedeemGrantFailureRollsBack(t *testing.T) {
 	ctx := context.Background()
 
 	_, hash := newToken()
-	_, err := s.CreateInvite(ctx, hash, "oidc-sub-alice", time.Hour)
+	_, err := s.CreateInvite(ctx, hash, "oidc-sub-alice", "Alice", time.Hour)
 	require.NoError(t, err)
 
 	_, err = s.RedeemInvite(ctx, hash, testProfile, func(context.Context) (string, error) {
@@ -111,7 +111,7 @@ func TestRedeemExpired(t *testing.T) {
 
 	_, hash := newToken()
 	// Negative TTL puts expires_at in the past.
-	_, err := s.CreateInvite(ctx, hash, "oidc-sub-alice", -time.Hour)
+	_, err := s.CreateInvite(ctx, hash, "oidc-sub-alice", "Alice", -time.Hour)
 	require.NoError(t, err)
 
 	_, err = s.RedeemInvite(ctx, hash, testProfile, func(context.Context) (string, error) {
@@ -140,7 +140,7 @@ func TestRedeemConcurrentSingleUse(t *testing.T) {
 	ctx := context.Background()
 
 	_, hash := newToken()
-	_, err := s.CreateInvite(ctx, hash, "oidc-sub-alice", time.Hour)
+	_, err := s.CreateInvite(ctx, hash, "oidc-sub-alice", "Alice", time.Hour)
 	require.NoError(t, err)
 
 	var grants atomic.Int32

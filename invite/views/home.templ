@@ -1,13 +1,23 @@
 package views
 
 templ Home(vm HomeVM) {
-	@Layout("ATM10 invites", vm.Nav) {
+	@Layout("ATM10 portal", vm.Nav) {
 		<h1>Invite a friend</h1>
 		<p class="lead">
 			Mint a single-use link and send it to the person you are inviting. They open it,
 			type their Minecraft Java username, and they are added to the whitelist. No account
 			or sign-in is needed on their end.
 		</p>
+
+		<div
+			id="players"
+			class="statusbar"
+			hx-get={ templ.URL(vm.PlayersURL) }
+			hx-trigger="load, every 20s"
+			hx-swap="innerHTML"
+		>
+			<span class="pnames">Loading server status&hellip;</span>
+		</div>
 
 		if vm.CanMint {
 			<div class="card">
@@ -50,25 +60,12 @@ templ Home(vm HomeVM) {
 						if vm.ShowOwner {
 							<th>Created by</th>
 						}
+						<th></th>
 					</tr>
 				</thead>
 				<tbody>
 					for _, inv := range vm.Invites {
-						<tr>
-							<td>{ inv.CreatedAt }</td>
-							<td>{ inv.ExpiresAt }</td>
-							<td class={ "status-" + inv.Status }>{ inv.Status }</td>
-							<td>
-								if inv.MinecraftName != "" {
-									{ inv.MinecraftName }
-								} else {
-									<span class="muted">&middot;</span>
-								}
-							</td>
-							if vm.ShowOwner {
-								<td class="muted">{ inv.CreatedBy }</td>
-							}
-						</tr>
+						@InviteRow(inv)
 					}
 				</tbody>
 			</table>
@@ -80,24 +77,72 @@ templ Home(vm HomeVM) {
 				<thead>
 					<tr>
 						<th>When</th>
-						<th>Actor</th>
-						<th>Action</th>
-						<th>Detail</th>
+						<th>Who</th>
+						<th>What</th>
+						<th>Details</th>
 					</tr>
 				</thead>
 				<tbody>
 					for _, a := range vm.Audit {
 						<tr>
 							<td>{ a.At }</td>
-							<td class="muted">{ a.Actor }</td>
+							<td>{ a.Who }</td>
 							<td>{ a.Action }</td>
-							<td><code class="detail">{ a.Detail }</code></td>
+							<td class="detail">{ a.Detail }</td>
 						</tr>
 					}
 				</tbody>
 			</table>
 		}
 	}
+}
+
+// InviteRow is one <tr> of the invite table. It is also returned on its own by
+// the cancel handler so htmx can swap the row in place.
+templ InviteRow(inv InviteRowVM) {
+	<tr>
+		<td>{ inv.CreatedAt }</td>
+		<td>{ inv.ExpiresAt }</td>
+		<td class={ "status-" + inv.Status }>{ inv.Status }</td>
+		<td>
+			if inv.MinecraftName != "" {
+				{ inv.MinecraftName }
+			} else {
+				<span class="muted">&middot;</span>
+			}
+		</td>
+		if inv.ShowOwner {
+			<td class="muted">{ inv.CreatedBy }</td>
+		}
+		<td>
+			if inv.CanCancel {
+				<button
+					class="cancelbtn"
+					hx-post={ templ.URL(inv.CancelURL) }
+					hx-target="closest tr"
+					hx-swap="outerHTML"
+					hx-confirm="Cancel this invite link?"
+				>Cancel</button>
+			}
+		</td>
+	</tr>
+}
+
+// Players is the online-players fragment, polled on the dashboard and fetched
+// by the public landing page.
+templ Players(vm PlayersVM) {
+	if vm.Available {
+		<span class="dot"></span>
+		<span class="pcount">{ vm.Online } / { vm.Max }</span>
+		<span>online</span>
+		if vm.NamesText != "" {
+			<span class="pnames">{ vm.NamesText }</span>
+		}
+	} else {
+		<span class="dot off"></span>
+		<span class="pnames">server status unavailable</span>
+	}
+	<a class="maplink" href={ templ.SafeURL(vm.MapURL) }>Open map</a>
 }
 
 // Pending is shown to a signed-in user who has no role yet (a self-registered
@@ -109,8 +154,8 @@ templ Pending(nav NavVM) {
 			<p>You are signed in, but your account has not been granted access yet.
 			Ask Dan to approve you; once he does, reload this page and you will be able
 			to mint invite links.</p>
-			if nav.Email != "" {
-				<p class="muted">Signed in as { nav.Email }.</p>
+			if nav.Name != "" {
+				<p class="muted">Signed in as { nav.Name }.</p>
 			}
 		</div>
 	}

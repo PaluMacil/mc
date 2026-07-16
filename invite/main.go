@@ -72,15 +72,16 @@ func run(log *slog.Logger) error {
 	}
 
 	srv := &Server{
-		cfg:       cfg,
-		store:     store,
-		auth:      auth,
-		sessions:  sessions,
-		mojang:    MojangResolver{},
-		whitelist: RCONClient{Addr: cfg.RCONAddr, Password: cfg.RCONPassword},
-		limiter:   newIPLimiter(5, 30*time.Second),
-		loc:       loc,
-		log:       log,
+		cfg:      cfg,
+		store:    store,
+		auth:     auth,
+		sessions: sessions,
+		mojang:   MojangResolver{},
+		rcon:     RCONClient{Addr: cfg.RCONAddr, Password: cfg.RCONPassword},
+		players:  &playersCache{ttl: 10 * time.Second},
+		limiter:  newIPLimiter(5, 30*time.Second),
+		loc:      loc,
+		log:      log,
 	}
 
 	httpSrv := &http.Server{

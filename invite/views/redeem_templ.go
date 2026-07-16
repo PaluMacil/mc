@@ -107,13 +107,18 @@ func Redeem(vm RedeemVM) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
+			case "canceled":
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<div class=\"notice err\">This invite link was canceled. Ask the person who invited you for a new one.</div>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
 			case "expired":
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<div class=\"notice err\">This invite link has expired. Ask the person who invited you for a new one.</div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<div class=\"notice err\">This invite link has expired. Ask the person who invited you for a new one.</div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			default:
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<div class=\"notice err\">This invite link is not valid. Check that you copied the whole link, or ask for a new one.</div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<div class=\"notice err\">This invite link is not valid. Check that you copied the whole link, or ask for a new one.</div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -162,33 +167,33 @@ func RedeemDone(vm RedeemDoneVM) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<h1>You are on the server</h1><div class=\"notice ok\"><strong>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<h1>You are on the server</h1><div class=\"notice ok\"><strong>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var8 string
 			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(vm.MinecraftName)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/redeem.templ`, Line: 54, Col: 29}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/redeem.templ`, Line: 58, Col: 29}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</strong> has been added to the whitelist.</div><div class=\"card\"><p>Open Minecraft with the All the Mods 10 pack, choose <strong>Multiplayer</strong>, then <strong>Add Server</strong>, and connect to:</p><div class=\"link\"><code>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</strong> has been added to the whitelist.</div><div class=\"card\"><p>Open Minecraft with the All the Mods 10 pack, choose <strong>Multiplayer</strong>, then <strong>Add Server</strong>, and connect to:</p><div class=\"link\"><code>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var9 string
 			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(vm.ServerAddress)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/redeem.templ`, Line: 60, Col: 28}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/redeem.templ`, Line: 64, Col: 28}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</code> <button class=\"btn\" type=\"button\" onclick=\"mcCopy(this)\">Copy</button></div><p class=\"muted\">You must be running the same pack version as the server. If you have not installed the pack yet, follow the setup guide on the main page first.</p></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</code> <button class=\"btn\" type=\"button\" onclick=\"mcCopy(this)\">Copy</button></div><p class=\"muted\">You must be running the same pack version as the server. If you have not installed the pack yet, follow the setup guide on the main page first.</p></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

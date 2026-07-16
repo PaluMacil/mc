@@ -43,6 +43,11 @@ type Config struct {
 	// TZ is the IANA timezone the dashboard formats timestamps in. The tz
 	// database is embedded (time/tzdata), so the image needs no tzdata package.
 	TZ string
+
+	// SiteURL and MapURL are where the landing page and live map live, for the
+	// portal's nav. Same host, so relative paths by default.
+	SiteURL string
+	MapURL  string
 }
 
 // LoadConfig reads and validates configuration from the environment. It returns
@@ -62,6 +67,8 @@ func LoadConfig() (Config, error) {
 		DatabaseURL:      os.Getenv("INVITE_DATABASE_URL"),
 		ServerAddress:    envOr("INVITE_SERVER_ADDRESS", "mc.danwolf.net"),
 		TZ:               envOr("INVITE_TZ", "America/Chicago"),
+		SiteURL:          envOr("INVITE_SITE_URL", "/"),
+		MapURL:           envOr("INVITE_MAP_URL", "/map/"),
 	}
 
 	var errs []error

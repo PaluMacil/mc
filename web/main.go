@@ -1,7 +1,8 @@
-// Command mc-web serves the mc.danwolf.net landing page: how to connect, a link
-// to the live BlueMap, the server rules, and a setup guide written for the
-// parents of the 7 to 13 year old players. Everything (template and the
-// version-select screenshot) is embedded, so the binary is the whole site.
+// Command mc-web serves the mc.danwolf.net public pages: the landing page (how
+// to connect, a link to the live BlueMap, a live "who's online" widget, the
+// rules, and a setup guide for the parents of the 7 to 13 year old players) and
+// a parental-controls tips page. Everything (templates and the version-select
+// screenshot) is embedded, so the binary is the whole site.
 //
 // The pack version and addresses are flags with sane defaults so a pack upgrade
 // is a one-line change here (and the screenshot swap), per the upgrade runbook.
@@ -17,20 +18,22 @@ import (
 	"time"
 )
 
-//go:embed templates/index.html.tmpl
-var indexSrc string
+//go:embed templates/*.tmpl
+var templatesFS embed.FS
 
 //go:embed assets
 var assetsFS embed.FS
 
-// pageData is the template context. Keep the dynamic, version-coupled values
-// here so the guide and the connect card never drift from each other.
+// pageData is the shared template context. Keep the dynamic, version-coupled
+// values here so the guide, nav, and connect card never drift.
 type pageData struct {
 	PackVersion     string
 	ServerAddress   string
 	FallbackAddress string
 	MapPath         string
 	PortalPath      string
+	ParentsPath     string
+	PlayersURL      string
 	Year            int
 }
 
@@ -41,6 +44,8 @@ func main() {
 	fallbackAddr := flag.String("fallback-address", "game.danwolf.net:25999", "explicit fallback for launchers that ignore SRV")
 	mapPath := flag.String("map-path", "/map/", "path the live BlueMap is served under (trailing slash matters)")
 	portalPath := flag.String("portal-path", "/portal/", "path the member portal (sign in, invites) is served under")
+	parentsPath := flag.String("parents-path", "/parents", "path of the parental-controls tips page")
+	playersURL := flag.String("players-url", "/portal/players", "same-origin endpoint returning the online-players fragment")
 	flag.Parse()
 
 	data := pageData{
@@ -49,39 +54,35 @@ func main() {
 		FallbackAddress: *fallbackAddr,
 		MapPath:         *mapPath,
 		PortalPath:      *portalPath,
+		ParentsPath:     *parentsPath,
+		PlayersURL:      *playersURL,
 		Year:            time.Now().Year(),
 	}
 
-	// Render once at startup; the page is static for the process lifetime.
-	tmpl := template.Must(template.New("index").Parse(indexSrc))
-	var buf strings.Builder
-	if err := tmpl.Execute(&buf, data); err != nil {
-		log.Fatalf("render index: %v", err)
-	}
-	page := []byte(buf.String())
+	tmpl := template.Must(template.ParseFS(templatesFS, "templates/*.tmpl"))
+	index := renderPage(tmpl, "index.html.tmpl", data)
+	parents := renderPage(tmpl, "parents.html.tmpl", data)
 
 	mux := http.NewServeMux()
 
-	// Static assets (the screenshot). The embed FS already roots paths at
-	// "assets/", so the /assets/ URL prefix maps straight through.
 	assets := http.FileServer(http.FS(assetsFS))
 	mux.Handle("/assets/", cacheControl(assets))
 
-	// Infra health check, deliberately unstyled and dependency-free.
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.Write([]byte("ok"))
 	})
 
-	// Landing page. Only the exact root renders the page; anything else under
-	// mc-web's / route is a genuine 404 rather than a soft catch-all.
+	mux.HandleFunc(strings.TrimRight(*parentsPath, "/"), servePage(parents))
+
+	// Landing page. Only the exact root renders it; anything else under
+	// mc-web's / route that is not a more specific match is a genuine 404.
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
 			return
 		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write(page)
+		servePage(index)(w, r)
 	})
 
 	srv := &http.Server{
@@ -91,6 +92,23 @@ func main() {
 	}
 	log.Printf("mc-web listening on %s (pack %s)", *listen, data.PackVersion)
 	log.Fatal(srv.ListenAndServe())
+}
+
+// renderPage executes one template to bytes at startup; pages are static for
+// the process lifetime.
+func renderPage(tmpl *template.Template, name string, data pageData) []byte {
+	var buf strings.Builder
+	if err := tmpl.ExecuteTemplate(&buf, name, data); err != nil {
+		log.Fatalf("render %s: %v", name, err)
+	}
+	return []byte(buf.String())
+}
+
+func servePage(page []byte) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Write(page)
+	}
 }
 
 func cacheControl(h http.Handler) http.Handler {

@@ -5,45 +5,61 @@
 package views
 
 // NavVM is the shared header. All URLs are absolute paths already carrying the
-// app's base path.
+// app's base path (or the site-relative landing/map paths).
 type NavVM struct {
-	HomeURL   string
-	LoginURL  string
-	LogoutURL string
-	HtmxSrc   string
-	SignedIn  bool
-	Email     string
-	IsAdmin   bool
-	IsInviter bool
-	HideAuth  bool // public pages (invite redemption) show no auth controls
+	HomeURL    string // portal dashboard
+	LandingURL string // main site landing page
+	MapURL     string // live world map
+	LoginURL   string
+	LogoutURL  string
+	HtmxSrc    string
+	SignedIn   bool
+	Name       string
+	IsAdmin    bool
+	IsInviter  bool
+	HideAuth   bool // public pages (invite redemption) show no auth controls
 }
 
 // InviteRowVM is one row of the invite table.
 type InviteRowVM struct {
 	CreatedAt     string
 	ExpiresAt     string
-	Status        string // active, used, or expired
+	Status        string // active, used, canceled, or expired
 	MinecraftName string
-	CreatedBy     string // shown only in the admin (all-inviters) view
+	CreatedBy     string // display name, shown only in the admin (all) view
+	ShowOwner     bool   // render the "created by" cell
+	CanCancel     bool
+	CancelURL     string // htmx POST target when CanCancel
+}
+
+// PlayersVM drives the online-players widget (used on the portal and, via the
+// same public fragment, on the landing page).
+type PlayersVM struct {
+	Available bool // false when RCON could not be reached
+	Online    int
+	Max       int
+	NamesText string // comma-joined online names, pre-formatted
+	MapURL    string
 }
 
 // HomeVM drives the inviter/admin dashboard.
 type HomeVM struct {
-	Nav       NavVM
-	CanMint   bool
-	MintURL   string
-	AdminView bool   // the signed-in user is an admin (can see the toggle and audit)
-	ShowAll   bool   // currently showing every inviter's invites
-	ToggleURL string // link that flips between "mine" and "all"
-	ShowOwner bool   // render the "created by" column
-	Invites   []InviteRowVM
-	Audit     []AuditRowVM
+	Nav        NavVM
+	PlayersURL string // fragment endpoint the status strip polls
+	CanMint    bool
+	MintURL    string
+	AdminView  bool   // the signed-in user is an admin (can see the toggle and audit)
+	ShowAll    bool   // currently showing every inviter's invites
+	ToggleURL  string // link that flips between "mine" and "all"
+	ShowOwner  bool   // render the "created by" column
+	Invites    []InviteRowVM
+	Audit      []AuditRowVM
 }
 
 // AuditRowVM is one row of the admin audit table.
 type AuditRowVM struct {
 	At     string
-	Actor  string
+	Who    string
 	Action string
 	Detail string
 }
@@ -58,7 +74,7 @@ type MintedVM struct {
 // RedeemVM drives the public redemption page before submission.
 type RedeemVM struct {
 	Nav       NavVM
-	State     string // form, used, expired, or invalid
+	State     string // form, used, canceled, expired, or invalid
 	SubmitURL string
 	Username  string
 	Error     string

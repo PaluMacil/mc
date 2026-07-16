@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parent tips: parental controls and modded Minecraft</title>
+<meta name="description" content="How to set parental controls (including Qustodio) so they do not block or slow down modded Minecraft on this server.">
+<style>
+  :root {
+    --bg:#14161a; --panel:#1e2128; --panel2:#262a33; --text:#e8eaed; --muted:#a7adba;
+    --accent:#5db462; --accent2:#7fd884; --border:#333844; --code:#0f1115;
+    --warn-bg:#3a2c14; --warn-border:#7a5a1e; --warn-text:#f4d58b;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg:#f4f6f8; --panel:#fff; --panel2:#eef1f5; --text:#1b1e24; --muted:#566072;
+      --accent:#2f8f43; --accent2:#257035; --border:#d7dde5; --code:#eef1f5;
+      --warn-bg:#fff5db; --warn-border:#e2b657; --warn-text:#6b4e12;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text);
+    font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
+  .wrap { max-width:760px; margin:0 auto; padding:2rem 1.1rem 4rem; }
+  a { color:var(--accent2); }
+  .topnav { display:flex; gap:1.1rem; flex-wrap:wrap; padding:0.2rem 0 1.4rem; }
+  .topnav a { color:var(--muted); text-decoration:none; font-weight:600; }
+  .topnav a:hover { color:var(--text); }
+  h1 { font-size:1.8rem; margin:0.3rem 0 0.4rem; }
+  h2 { font-size:1.3rem; margin:2.2rem 0 0.6rem; }
+  h3 { font-size:1.05rem; margin:1.2rem 0 0.3rem; }
+  p.lead { color:var(--muted); margin-top:0; }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:1.1rem 1.3rem; margin:1.1rem 0; }
+  code { font-family:ui-monospace,Menlo,Consolas,monospace; background:var(--code);
+    border:1px solid var(--border); border-radius:5px; padding:0.05rem 0.35rem; }
+  ul, ol { padding-left:1.3rem; }
+  li { margin:0.35rem 0; }
+  .note { background:var(--warn-bg); border:1px solid var(--warn-border); color:var(--warn-text);
+    border-radius:10px; padding:0.8rem 1rem; margin:1rem 0; }
+  .muted { color:var(--muted); }
+  .em { color:var(--accent2); font-weight:600; }
+  footer { text-align:center; color:var(--muted); font-size:0.9rem; margin-top:3rem; }
+  footer a { color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav class="topnav">
+    <a href="/">Home</a>
+    <a href="{{.MapPath}}">Live map</a>
+    <a href="{{.ParentsPath}}">Parent tips</a>
+    <a href="{{.PortalPath}}">Sign in</a>
+  </nav>
+
+  <h1>Parent tips: parental controls and Minecraft</h1>
+  <p class="lead">All the Mods 10 is <span class="em">Minecraft Java Edition</span>, which runs on a
+  Windows, Mac, or Linux computer (not phones or tablets). If a parental-control app, home network
+  filter, or antivirus is in the way, it can stop the game from connecting or make it laggy. Here is
+  what to allow.</p>
+
+  <h2>What the game needs</h2>
+  <div class="card">
+    <ul>
+      <li>The <span class="em">Minecraft / Java app</span> allowed to run and reach the internet.
+      Launched from CurseForge, it often shows up not as "Minecraft" but as
+      <code>javaw.exe</code>, <code>java.exe</code>, <code>CurseForge</code>, or
+      <span class="em">"OpenJDK Platform Binary"</span> (CurseForge ships its own Java). Allow whichever
+      of those appears.</li>
+      <li>An outbound connection to <code>{{.FallbackAddress}}</code>. That is a
+      <span class="em">nonstandard port</span> (Minecraft usually uses 25565), so filters that only
+      allow common ports can silently block it. Allow outbound TCP to
+      <code>game.danwolf.net</code> port <code>25999</code>.</li>
+      <li>Normal web access to <code>{{.ServerAddress}}</code> (this page and the live map).</li>
+      <li>No VPN-based filtering or bandwidth throttling in the way (those add lag), and enough spare
+      CPU: modded Minecraft is heavy, and real-time scanning competes with it.</li>
+    </ul>
+  </div>
+
+  <h2>If your child uses Qustodio</h2>
+  <p>One player has had high ping that seems tied to Qustodio, so here is the specific guidance.
+  First, an honest note: on <span class="em">Windows and Mac</span> (where this game runs), Qustodio
+  filters at the DNS and browser level, not as a whole-device VPN, so there is no documented setting
+  that directly adds ping to the game. Qustodio's known "adds latency" behavior is its
+  <span class="em">mobile VPN</span>, which does not apply here. So the plan is: make sure Qustodio is
+  not blocking the game, then test whether it is actually the cause.</p>
+
+  <h3>1. Allow the game app</h3>
+  <p>In the Qustodio parent dashboard (<code>family.qustodio.com</code>) or the Qustodio Parents app,
+  pick the child's profile, then <span class="em">Rules &rarr; Games &amp; apps &rarr; App exceptions</span>,
+  and set the Minecraft / Java app (any of <code>Minecraft</code>, <code>javaw.exe</code>,
+  <code>java.exe</code>, <code>CurseForge</code>, "OpenJDK Platform Binary") to <span class="em">Allowed</span>,
+  with no time limit. Launch the pack once first so the entry appears.</p>
+
+  <h3>2. Allow the two websites</h3>
+  <p>Under <span class="em">Rules &rarr; Web Filtering</span>, add <code>{{.ServerAddress}}</code> and
+  <code>game.danwolf.net</code> and set them to <span class="em">Allow</span>. Qustodio also has an
+  <span class="em">Ignore</span> option, which makes it ignore the connection entirely; use that if
+  Allow is not enough.</p>
+
+  <h3>3. If the ping is still high, test the cause</h3>
+  <p>Because a desktop ping impact is not a documented Qustodio behavior, the reliable way to find out
+  is to test it:</p>
+  <ol>
+    <li><span class="em">Pause Qustodio protection</span> on that computer and reconnect. Watch the ping
+    (the connection bars on the multiplayer screen, or press <code>F3</code> in game to see latency).</li>
+    <li>If pausing fixes it, Qustodio is the cause; re-check the app and website rules above, and if it
+    still only works while paused, <span class="em">contact Qustodio support</span>, since a desktop
+    slowdown like this is not expected.</li>
+    <li>If pausing does not change the ping, the cause is elsewhere (home network, Wi-Fi, or the
+    computer). See the general list below.</li>
+  </ol>
+  <div class="note">Qustodio's own "always allowed" setting that keeps an app usable during a pause is
+  Android-only, so on a Windows or Mac it does not apply; just make sure gaming time is not inside a
+  blocked routine or time limit.</div>
+
+  <h2>Other parental controls, routers, and antivirus</h2>
+  <div class="card">
+    <p>The same idea applies to any filter (a different parental-control app, a router's family
+    settings, Windows security, or antivirus):</p>
+    <ul>
+      <li>Allow the <span class="em">Java / Minecraft app</span> and the CurseForge launcher through app
+      blockers, firewalls, and antivirus.</li>
+      <li>Allow an <span class="em">outbound TCP connection to <code>game.danwolf.net</code> on port
+      25999</span>.</li>
+      <li>Allow <code>{{.ServerAddress}}</code> over normal HTTPS.</li>
+      <li>Turn off any <span class="em">VPN-based filtering</span> or <span class="em">bandwidth
+      throttling</span> for that device while playing, since those are the usual causes of high ping.</li>
+    </ul>
+  </div>
+
+  <footer>
+    <p><a href="/">Back to the main page</a> &middot; questions? Ask Dan.</p>
+  </footer>
+
+</div>
+</body>
+</html>

@@ -25,3 +25,11 @@ create table if not exists audit_log (
 );
 
 create index if not exists audit_log_at_idx on audit_log (at desc);
+
+-- v0.4 additions (idempotent): human-readable names alongside the OIDC subject,
+-- and invite cancellation (soft revoke, kept for the audit trail).
+alter table invites    add column if not exists created_by_name  text;
+alter table invites    add column if not exists canceled_at      timestamptz;
+alter table invites    add column if not exists canceled_by      text;
+alter table invites    add column if not exists canceled_by_name text;
+alter table audit_log  add column if not exists actor_name       text;
