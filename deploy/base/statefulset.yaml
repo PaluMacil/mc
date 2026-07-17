@@ -26,35 +26,72 @@ spec:
         # as root, chowns /data to UID/GID 1000, then drops privileges).
         fsGroup: 1000
       initContainers:
-        # Stage the server pack zip from the private R2 bucket onto the
+        # Stage the server pack zip and the two server-only mod jars
+        # (GriefLogger, BlueMap) from the private R2 bucket onto the
         # persistent data volume. Skip-if-present is keyed on the object
-        # name, so a normal restart fetches nothing; bumping PACK_OBJECT
+        # name, so a normal restart fetches nothing; bumping an *_OBJECT var
         # (a new object name) is what triggers a fetch. The .partial + mv
         # dance keeps a torn download from ever satisfying the skip check.
-        - name: fetch-pack
+        #
+        # The two mods were previously pulled by itzg from Modrinth via
+        # MODRINTH_PROJECTS, which re-resolved them against the Modrinth API
+        # on every boot and so gated startup on that API being up; a Modrinth
+        # 5xx crash-looped the server. Staging them here as loose jars, exactly
+        # like the pack, takes Modrinth off the boot path entirely. itzg leaves
+        # loose jars in /data/mods alone (REMOVE_OLD_MODS is unset), and the
+        # final `find ... -delete` clears any stale .modrinth-manifest.json so
+        # itzg's mod manager never reconciles (and never deletes) these
+        # now-unmanaged jars. Each *_OBJECT value is the jar's exact on-disk
+        # filename (the Modrinth primary-file name), so on the cutover boot the
+        # already-present jar satisfies skip-if-present rather than staging a
+        # duplicate; upload each jar to R2 under this same name.
+        - name: stage-assets
           image: curlimages/curl:8.21.0
           command: [sh, -c]
           args:
             - |
               set -eu
-              dest="/data/packs/${PACK_OBJECT}"
-              if [ -s "$dest" ]; then
-                echo "pack already staged: $dest"
-                exit 0
-              fi
-              mkdir -p /data/packs
-              echo "fetching ${PACK_OBJECT} from R2"
-              curl -sS -f --retry 3 \
-                --aws-sigv4 "aws:amz:auto:s3" \
-                --user "${R2_ACCESS_KEY_ID}:${R2_SECRET_ACCESS_KEY}" \
-                -o "${dest}.partial" \
-                "${R2_ENDPOINT}/${R2_BUCKET}/${PACK_OBJECT}"
-              mv "${dest}.partial" "$dest"
-              wc -c "$dest"
+              stage() {
+                obj="$1"; dest="$2"
+                if [ -s "$dest" ]; then
+                  echo "already staged: $dest"
+                  return 0
+                fi
+                mkdir -p "$(dirname "$dest")"
+                echo "fetching ${obj} from R2"
+                curl -sS -f --retry 3 \
+                  --aws-sigv4 "aws:amz:auto:s3" \
+                  --user "${R2_ACCESS_KEY_ID}:${R2_SECRET_ACCESS_KEY}" \
+                  -o "${dest}.partial" \
+                  "${R2_ENDPOINT}/${R2_BUCKET}/${obj}"
+                mv "${dest}.partial" "$dest"
+                wc -c "$dest"
+              }
+              stage "${PACK_OBJECT}"        "/data/packs/${PACK_OBJECT}"
+              stage "${GRIEFLOGGER_OBJECT}" "/data/mods/${GRIEFLOGGER_OBJECT}"
+              stage "${BLUEMAP_OBJECT}"     "/data/mods/${BLUEMAP_OBJECT}"
+              # Belt-and-suspenders: with MODRINTH_PROJECTS removed itzg no
+              # longer reconciles, but clear any leftover manifest anyway so a
+              # stale record can never delete the loose jars staged above.
+              # maxdepth keeps this off the huge world/ tree; the || true keeps
+              # a no-match (or a find without -delete) from aborting init.
+              find /data -maxdepth 2 -name '.modrinth*manifest*.json' \
+                -exec rm -f {} + 2>/dev/null || true
           env:
             # Keep PACK_OBJECT in sync with GENERIC_PACK on the mc container.
             - name: PACK_OBJECT
               value: ServerFiles-7.1.zip
+            # Server-only mod jars, version-pinned by object name (bump the
+            # object name to upgrade, same as the pack). The value must equal
+            # the jar's exact filename in /data/mods. GriefLogger 1.2.9
+            # (block-change audit for griefing forensics); BlueMap 5.7-neoforge
+            # (the last BlueMap that supports 1.21.1; Phase 2 web map, serves on
+            # 8100). Do NOT move these back to MODRINTH_PROJECTS: that re-gates
+            # every boot on the Modrinth API being reachable.
+            - name: GRIEFLOGGER_OBJECT
+              value: grieflogger-1.2.9-1.21.1-neoforge.jar
+            - name: BLUEMAP_OBJECT
+              value: bluemap-5.7-neoforge.jar
             # Endpoint and bucket are not secret material; only the
             # credentials live in the mc-r2 Secret (read-only key).
             - name: R2_ENDPOINT
@@ -94,33 +131,29 @@ spec:
             # AllTheMods/ATM-10). Bump together with the pack.
             - name: NEOFORGE_VERSION
               value: "21.1.234"
-            # Keep in sync with PACK_OBJECT on the fetch-pack initContainer.
+            # Keep in sync with PACK_OBJECT on the stage-assets initContainer.
             # The image records sha1 state in /data/.generic_pack.sum and
             # skips the whole extract when unchanged, so normal restarts do
             # not redo the 1.1GB apply. On change it removes every file the
             # old pack installed (/data/manifest.txt) before overlaying the
-            # new one; world/ and Modrinth-managed jars are never touched.
+            # new one; world/ and the loose staged mod jars are never touched.
             # Do NOT set SKIP_GENERIC_PACK_UPDATE_CHECK (silently blocks
             # future upgrades) or REMOVE_OLD_MODS (forces a full reapply
             # every boot). .generic_pack.sum and manifest.txt in /data are
             # load-bearing state; never delete them.
             - name: GENERIC_PACK
               value: /data/packs/ServerFiles-7.1.zip
-            # Extra server-side-only mods from Modrinth, pinned by version ID.
-            # Rmp3tvQg = GriefLogger 1.2.9-1.21.1 (neoforge build), block-change
-            # audit for griefing forensics. 8iJcPOHJ = BlueMap 5.7-neoforge, the
-            # last BlueMap release that still supports 1.21.1 (5.8+ moved on);
-            # the server-side live web map (Phase 2), which serves on 8100.
-            # spark is NOT listed because ATM10 already ships it; adding it again
-            # would duplicate the jar. Never list a mod the pack itself ships;
-            # the pack manifest would own the filename and delete it on upgrades.
-            - name: MODRINTH_PROJECTS
-              value: "grieflogger:Rmp3tvQg,bluemap:8iJcPOHJ"
-            # "required" can pull dependency versions that fight the pack's own
-            # pinned mods (itzg/docker-minecraft-server#3849). Pin explicitly
-            # instead if a Modrinth mod ever needs a dependency.
-            - name: MODRINTH_DOWNLOAD_DEPENDENCIES
-              value: "none"
+            # GriefLogger and BlueMap (both server-side only) are staged as
+            # loose jars in /data/mods by the stage-assets initContainer above,
+            # not pulled here. They used to live in MODRINTH_PROJECTS, but that
+            # re-resolved them against the Modrinth API on every boot and gated
+            # startup on it (a Modrinth 5xx crash-looped the server). Staging
+            # them from R2 like the pack keeps them off the boot path and out of
+            # any external runtime dependency; it also makes R2 their restore
+            # source, since backups EXCLUDE *.jar. Do NOT reintroduce
+            # MODRINTH_PROJECTS for these. And never stage a mod the pack itself
+            # ships (the pack manifest owns those filenames and would delete a
+            # duplicate on upgrade); spark, for one, already ships with ATM10.
             # Pre-seed BlueMap's core.conf from the mounted /config overlay so
             # the map renders on first boot (accept-download + a single render
             # thread) instead of needing a hand-edit and a second restart. itzg

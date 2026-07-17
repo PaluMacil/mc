@@ -116,7 +116,7 @@ Runtime additions persist across restarts: the manifests seed
 
 The pack is the official ATM10 **server pack** (`ServerFiles-<ver>.zip`),
 stored in the private R2 bucket `mc-mods` and staged onto the data
-volume by the `fetch-pack` initContainer. The staged zip is the version
+volume by the `stage-assets` initContainer. The staged zip is the version
 pin: the initContainer skips the fetch when the object is already
 present (keyed on object name), and the itzg image records a sha1 of
 the applied pack in `/data/.generic_pack.sum`, so a normal restart
@@ -149,15 +149,16 @@ version and a switchover time before touching the pin.
    `deploy/base/web-deployment.yaml`) and replace
    `web/assets/atm10-7-1.png` with a screenshot of the new version on the
    CurseForge Versions tab. If the bump also crosses a Minecraft version,
-   confirm the pinned BlueMap build in `MODRINTH_PROJECTS` still supports
-   it (5.7 is the last build that supports 1.21.1). Commit, tag a new
-   version, and bump the `mc-web`/`mc-invite` image tags in `deploy/base`
-   to match (CI builds those images at the git tag).
+   confirm the staged BlueMap jar (`BLUEMAP_OBJECT`) still supports it (5.7
+   is the last build that supports 1.21.1) and stage a newer one if not,
+   per "Upgrading the extra mods" below. Commit, tag a new version, and
+   bump the `mc-web`/`mc-invite` image tags in `deploy/base` to match (CI
+   builds those images at the git tag).
 5. Bump the `?ref=` pin in homelab `workloads/mc/kustomization.yaml`,
    commit, push. ArgoCD restarts the pod: the initContainer fetches the
    new object, and the image removes every file the old pack installed
    (tracked in `/data/manifest.txt`) before overlaying the new one.
-   `world/` and the Modrinth-managed mods are never touched.
+   `world/` and the loose staged mod jars are never touched.
 6. Watch `kubectl -n mc logs mc-0 -c mc -f` through startup, then have a
    player (on the new client version) verify they can connect.
 7. Rollback: restore the pre-upgrade snapshot (below) **and** revert the
@@ -170,6 +171,37 @@ from the zip) are deleted and replaced on every pack upgrade. Server
 behavior that must survive upgrades belongs in env vars in the
 StatefulSet, which the image reapplies over `server.properties` every
 boot.
+
+### Upgrading the extra mods (GriefLogger, BlueMap)
+
+The two server-only extra mods are **not** pulled from Modrinth at
+runtime. They are staged as loose jars in `/data/mods` from the `mc-mods`
+R2 bucket by the `stage-assets` initContainer, exactly like the pack. This
+is deliberate: `MODRINTH_PROJECTS` made itzg re-resolve them against the
+Modrinth API on every boot, so a Modrinth outage (HTTP 5xx) crash-looped
+the server. Loose jars take that dependency off the boot path (a normal
+restart makes no outbound mod call at all) and, because backups exclude
+`*.jar`, make R2 their restore source of truth.
+
+To upgrade one (rare; BlueMap stays at 5.7 until a Minecraft-version bump,
+which is already a coordinated pack event):
+
+1. Download the new jar and upload it to the `mc-mods` R2 bucket under its
+   exact release filename. Verify the sha1 after upload.
+2. Snapshot first: `kubectl -n mc exec mc-0 -c backup -- backup now`.
+3. In `deploy/base/statefulset.yaml`, bump the matching `*_OBJECT` value
+   (`GRIEFLOGGER_OBJECT` or `BLUEMAP_OBJECT`) to the new filename. Because
+   the value must equal the jar's on-disk name, the new object triggers a
+   fetch on the next boot.
+4. **Delete the old jar.** Nothing auto-removes it (unlike the pack, which
+   itzg tracks in `manifest.txt`, and unlike the old Modrinth flow, which
+   itzg cleaned via its manifest): loose jars are left alone on purpose.
+   Leaving the old jar loads two versions of the mod at once and breaks the
+   server. Remove it in the same window,
+   `kubectl -n mc exec mc-0 -c mc -- rm /data/mods/<old-jar>`, or from a
+   scratch pod if the server is down.
+5. Commit, tag, and bump the homelab `?ref=` pin as for any release. Watch
+   startup for the mod loading exactly once.
 
 ### Why the server pack instead of AUTO_CURSEFORGE
 
@@ -296,9 +328,13 @@ workload. The game path is untouched. Built; the manifests live in
 `deploy/base`, the landing page in `web/`. The one-time cutover (DNS
 check, image build, pin bump) is in `DEPLOY-PHASES-2-3.md`.
 
-- **BlueMap** is pinned in `MODRINTH_PROJECTS` as `bluemap:8iJcPOHJ`
-  (5.7-neoforge, the last BlueMap release that supports 1.21.1; later
-  releases dropped it). Server-side only, its integrated webserver binds
+- **BlueMap** is staged as a loose jar in `/data/mods` from the `mc-mods`
+  R2 bucket by the `stage-assets` initContainer, pinned by object name
+  `BLUEMAP_OBJECT` (5.7-neoforge, the last BlueMap release that supports
+  1.21.1; later releases dropped it). It is not pulled from Modrinth at
+  runtime: `MODRINTH_PROJECTS` re-resolved it against the Modrinth API on
+  every boot, so a Modrinth outage crash-looped the server (see "Upgrading
+  the extra mods"). Server-side only, its integrated webserver binds
   `0.0.0.0:8100`, reached cluster-internal by the `mc-map` ClusterIP
   Service. `deploy/base/bluemap/core.conf` is pre-seeded onto
   `/data/config/bluemap` through itzg's `/config` overlay

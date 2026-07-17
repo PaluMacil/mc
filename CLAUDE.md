@@ -46,7 +46,7 @@ Sibling repos, usually cloned alongside this one:
 - `EXISTING_WHITELIST_FILE=SKIP` / `EXISTING_OPS_FILE=SKIP`: seed once,
   then runtime RCON changes own the files.
 - The pack is the official ATM10 **server pack** zip, staged from the
-  private R2 bucket `mc-mods` by the `fetch-pack` initContainer and
+  private R2 bucket `mc-mods` by the `stage-assets` initContainer and
   applied via `GENERIC_PACK`. The pin is the object name; `PACK_OBJECT`,
   `GENERIC_PACK`, and `NEOFORGE_VERSION` must always move together.
   There is deliberately no AUTO_CURSEFORGE machinery (README: "Why the
@@ -56,9 +56,19 @@ Sibling repos, usually cloned alongside this one:
   and never set `SKIP_GENERIC_PACK_UPDATE_CHECK` (silently blocks
   future pack upgrades) or `REMOVE_OLD_MODS` (forces a full 1.1GB
   reapply every boot).
-- `MODRINTH_PROJECTS` entries are pinned by version ID;
-  `MODRINTH_DOWNLOAD_DEPENDENCIES=none` (dependency resolution fights
-  the pack's own pinned mods, itzg issue #3849).
+- The two server-only extra mods (GriefLogger, BlueMap) are staged as
+  loose jars in `/data/mods` from the `mc-mods` R2 bucket by the
+  `stage-assets` initContainer, exactly like the pack. Each is pinned by
+  its R2 object name (`GRIEFLOGGER_OBJECT`, `BLUEMAP_OBJECT`), which must
+  equal the jar's exact on-disk filename. **Do not reintroduce
+  `MODRINTH_PROJECTS`:** itzg re-resolves it against the Modrinth API on
+  every boot, so a Modrinth outage crash-loops the server (this is why the
+  mods moved to R2). itzg leaves loose `/data/mods` jars alone because
+  `REMOVE_OLD_MODS` is unset; the initContainer also deletes any leftover
+  `.modrinth-manifest.json` so a stale record can never reconcile them
+  away. Upgrading one of these mods means uploading the new jar to R2 and
+  bumping its `*_OBJECT` value (README upgrade runbook), not editing a
+  Modrinth version ID.
 - World data on `local-path` (jade NVMe), backups on `longhorn`. Never
   swap those; replicated sync writes hurt the tick loop, and
   un-replicated backups defeat their purpose.
