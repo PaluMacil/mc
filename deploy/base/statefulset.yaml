@@ -67,9 +67,10 @@ spec:
                 mv "${dest}.partial" "$dest"
                 wc -c "$dest"
               }
-              stage "${PACK_OBJECT}"        "/data/packs/${PACK_OBJECT}"
-              stage "${GRIEFLOGGER_OBJECT}" "/data/mods/${GRIEFLOGGER_OBJECT}"
-              stage "${BLUEMAP_OBJECT}"     "/data/mods/${BLUEMAP_OBJECT}"
+              stage "${PACK_OBJECT}"         "/data/packs/${PACK_OBJECT}"
+              stage "${GRIEFLOGGER_OBJECT}"  "/data/mods/${GRIEFLOGGER_OBJECT}"
+              stage "${BLUEMAP_OBJECT}"      "/data/mods/${BLUEMAP_OBJECT}"
+              stage "${PROMEXPORTER_OBJECT}" "/data/mods/${PROMEXPORTER_OBJECT}"
               # Belt-and-suspenders: with MODRINTH_PROJECTS removed itzg no
               # longer reconciles, but clear any leftover manifest anyway so a
               # stale record can never delete the loose jars staged above.
@@ -77,6 +78,29 @@ spec:
               # a no-match (or a find without -delete) from aborting init.
               find /data -maxdepth 2 -name '.modrinth*manifest*.json' \
                 -exec rm -f {} + 2>/dev/null || true
+              # Enable FTB Chunks offline force-loading (force_load_mode "always"):
+              # team-forced chunks stay loaded even with no players online. In this
+              # pack version FTB Chunks replaced the old boolean allow_offline_
+              # chunkloading with the force_load_mode enum ("default"/"always"/
+              # "never"); "always" is the equivalent of the old true. The effective
+              # config is /data/config/ftbchunks-world.snbt; a per-world override at
+              # /data/world/serverconfig/ takes precedence if it ever exists, so
+              # patch both. Idempotent (always->always is a no-op) and runs pre-JVM,
+              # so our declared value wins every boot, same idea as BlueMap core.conf.
+              # Write back by truncating the existing file (">"), not sed -i: this
+              # keeps the inode, so the file stays owned by the server user (1000)
+              # and group-writable, letting the server and the mod still rewrite it
+              # on load. sed -i would replace the inode with one owned by this init
+              # uid (100). This uid is in group 1000 (pod fsGroup) and the file is
+              # group-writable, so the in-place truncate is permitted. Non-fatal:
+              # a config tweak must never crash-loop the boot (verified post-deploy).
+              for f in /data/config/ftbchunks-world.snbt \
+                       /data/world/serverconfig/ftbchunks-world.snbt; do
+                [ -f "$f" ] || continue
+                new="$(sed 's/force_load_mode: "[^"]*"/force_load_mode: "always"/' "$f")" \
+                  && printf '%s\n' "$new" > "$f" \
+                  || echo "warn: could not set force_load_mode in $f"
+              done
           env:
             # Keep PACK_OBJECT in sync with GENERIC_PACK on the mc container.
             - name: PACK_OBJECT
@@ -92,6 +116,14 @@ spec:
               value: grieflogger-1.2.9-1.21.1-neoforge.jar
             - name: BLUEMAP_OBJECT
               value: bluemap-5.7-neoforge.jar
+            # Prometheus Exporter (cpburnz), server-only. Exposes a /metrics
+            # endpoint on 19565 (Minecraft tick/TPS, player list, per-dimension
+            # chunks/entities, plus JVM heap/GC) for the Grafana dashboard. Pinned
+            # by object name like the others; bump the object name to upgrade. The
+            # jar is published on the mod's GitHub Releases (tag 1.21.1-neoforge-
+            # 1.2.1); mirror it into R2 under this exact filename.
+            - name: PROMEXPORTER_OBJECT
+              value: Prometheus-Exporter-1.21.1-neoforge-1.2.1.jar
             # Endpoint and bucket are not secret material; only the
             # credentials live in the mc-r2 Secret (read-only key).
             - name: R2_ENDPOINT
@@ -232,6 +264,11 @@ spec:
             # RCON, exposed cluster-internal via the mc-rcon Service (Phase 3).
             - name: rcon
               containerPort: 25575
+            # Prometheus Exporter mod's /metrics endpoint (server-only mod staged
+            # from R2). Exposed cluster-internal via the mc-metrics Service and
+            # scraped by the ServiceMonitor in the homelab overlay; never external.
+            - name: metrics
+              containerPort: 19565
           resources:
             requests:
               cpu: "4"

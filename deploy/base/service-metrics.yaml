@@ -1,0 +1,21 @@
+# Prometheus metrics for the game server (the cpburnz Prometheus Exporter mod,
+# staged from R2 as a loose jar). The mod binds 0.0.0.0:19565 inside the mc
+# container, so a plain ClusterIP reaches it with no mod-side config. ClusterIP
+# only: metrics are never reachable from outside the cluster. The ServiceMonitor
+# that scrapes this lives in the homelab overlay (workloads/mc), which pins the
+# named "metrics" port so only this Service is scraped, not the other mc Services.
+# Selects the same pod as the game, headless, map, and rcon Services.
+apiVersion: v1
+kind: Service
+metadata:
+  name: mc-metrics
+  labels:
+    app: mc
+spec:
+  type: ClusterIP
+  selector:
+    app: mc
+  ports:
+    - name: metrics
+      port: 19565
+      targetPort: metrics

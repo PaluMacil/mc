@@ -172,16 +172,20 @@ behavior that must survive upgrades belongs in env vars in the
 StatefulSet, which the image reapplies over `server.properties` every
 boot.
 
-### Upgrading the extra mods (GriefLogger, BlueMap)
+### Upgrading the extra mods (GriefLogger, BlueMap, Prometheus Exporter)
 
-The two server-only extra mods are **not** pulled from Modrinth at
+The three server-only extra mods are **not** pulled from a mod host at
 runtime. They are staged as loose jars in `/data/mods` from the `mc-mods`
 R2 bucket by the `stage-assets` initContainer, exactly like the pack. This
-is deliberate: `MODRINTH_PROJECTS` made itzg re-resolve them against the
-Modrinth API on every boot, so a Modrinth outage (HTTP 5xx) crash-looped
-the server. Loose jars take that dependency off the boot path (a normal
-restart makes no outbound mod call at all) and, because backups exclude
-`*.jar`, make R2 their restore source of truth.
+is deliberate: `MODRINTH_PROJECTS` made itzg re-resolve GriefLogger and
+BlueMap against the Modrinth API on every boot, so a Modrinth outage (HTTP
+5xx) crash-looped the server. Loose jars take that dependency off the boot
+path (a normal restart makes no outbound mod call at all) and, because
+backups exclude `*.jar`, make R2 their restore source of truth. The
+Prometheus Exporter (`PROMEXPORTER_OBJECT`) is staged the same way; its jar
+is published on the mod's GitHub Releases (cpburnz/minecraft-prometheus-
+exporter, tag `1.21.1-neoforge-1.2.1`), which you mirror into R2, so it
+too never touches an external host at boot. See "Metrics and monitoring".
 
 To upgrade one (rare; BlueMap stays at 5.7 until a Minecraft-version bump,
 which is already a coordinated pack event):
@@ -190,9 +194,9 @@ which is already a coordinated pack event):
    exact release filename. Verify the sha1 after upload.
 2. Snapshot first: `kubectl -n mc exec mc-0 -c backup -- backup now`.
 3. In `deploy/base/statefulset.yaml`, bump the matching `*_OBJECT` value
-   (`GRIEFLOGGER_OBJECT` or `BLUEMAP_OBJECT`) to the new filename. Because
-   the value must equal the jar's on-disk name, the new object triggers a
-   fetch on the next boot.
+   (`GRIEFLOGGER_OBJECT`, `BLUEMAP_OBJECT`, or `PROMEXPORTER_OBJECT`) to the
+   new filename. Because the value must equal the jar's on-disk name, the
+   new object triggers a fetch on the next boot.
 4. **Delete the old jar.** Nothing auto-removes it (unlike the pack, which
    itzg tracks in `manifest.txt`, and unlike the old Modrinth flow, which
    itzg cleaned via its manifest): loose jars are left alone on purpose.
@@ -202,6 +206,49 @@ which is already a coordinated pack event):
    scratch pod if the server is down.
 5. Commit, tag, and bump the homelab `?ref=` pin as for any release. Watch
    startup for the mod loading exactly once.
+
+### Metrics and monitoring
+
+The Prometheus Exporter mod (server-only, staged from R2 like the other
+extra mods) serves a `/metrics` endpoint on port **19565** inside the mc
+container: Minecraft signals (tick time and TPS, connected players,
+per-dimension loaded chunks and entity counts) plus the JVM (heap and
+non-heap usage, GC counts and pause time, threads, process CPU). The
+`mc-metrics` ClusterIP Service (`deploy/base/service-metrics.yaml`) exposes
+it cluster-internal only; it is never reachable from outside the cluster.
+
+The scrape and the Grafana dashboard live in the **homelab** repo under
+`workloads/mc/` (a `ServiceMonitor` and a `grafana_dashboard`-labeled
+ConfigMap), not here. The cluster's kube-prometheus-stack discovers
+ServiceMonitors cluster-wide with no release label, and Grafana's sidecar
+auto-loads the dashboard. The dashboard is deliberately **game-specific**
+(players, TPS/MSPT, JVM heap and GC, per-dimension tick, chunks, entities);
+node and per-pod container CPU/RAM are already covered by the stack's
+node-exporter and `k8s-resources-pod` dashboards, so it does not replot
+them. Filter those to `namespace=mc` for the container's-eye view.
+
+First-time setup (already done once; listed for reference): download
+`Prometheus-Exporter-1.21.1-neoforge-1.2.1.jar` from the mod's GitHub
+Releases and upload it to the `mc-mods` R2 bucket under that exact name,
+then ship `PROMEXPORTER_OBJECT`, the `metrics` container port, and the
+`mc-metrics` Service (this repo) alongside the ServiceMonitor and dashboard
+(homelab). The exporter's own config auto-generates at
+`/data/config/prometheus_exporter-server.toml` on first boot with the
+defaults we want (`0.0.0.0:19565`, all collectors on); no pre-seed needed.
+
+### FTB Chunks offline chunk-loading
+
+`force_load_mode = "always"` in FTB Chunks: team-forced chunks stay loaded
+even when nobody is online (farms and processing keep running). This
+version of FTB Chunks replaced the old boolean `allow_offline_chunkloading`
+with a `force_load_mode` enum (`default` / `always` / `never`); `always` is
+the equivalent of the old `true`. The effective config is a per-world file
+(`/data/config/ftbchunks-world.snbt`) that lives on the data volume, not in
+this repo, so the `stage-assets` initContainer flips the one key in place on
+every boot (idempotent, pre-JVM), the same "our declared value wins each
+boot" approach used for BlueMap's `core.conf`. To change it, edit the `sed`
+target in `deploy/base/statefulset.yaml`; an in-game admin change reverts on
+the next restart.
 
 ### Why the server pack instead of AUTO_CURSEFORGE
 

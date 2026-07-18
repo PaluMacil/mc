@@ -12,6 +12,9 @@ resources:
   - web-service.yaml
   - middleware-map.yaml
   - ingress.yaml
+  # Monitoring: /metrics from the Prometheus Exporter mod, scraped by the
+  # ServiceMonitor in the homelab overlay (Grafana dashboard lives there too).
+  - service-metrics.yaml
   # Phase 3: invite app + cluster-internal RCON it drives
   - service-rcon.yaml
   - invite-deployment.yaml

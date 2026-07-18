@@ -56,19 +56,35 @@ Sibling repos, usually cloned alongside this one:
   and never set `SKIP_GENERIC_PACK_UPDATE_CHECK` (silently blocks
   future pack upgrades) or `REMOVE_OLD_MODS` (forces a full 1.1GB
   reapply every boot).
-- The two server-only extra mods (GriefLogger, BlueMap) are staged as
-  loose jars in `/data/mods` from the `mc-mods` R2 bucket by the
-  `stage-assets` initContainer, exactly like the pack. Each is pinned by
-  its R2 object name (`GRIEFLOGGER_OBJECT`, `BLUEMAP_OBJECT`), which must
-  equal the jar's exact on-disk filename. **Do not reintroduce
-  `MODRINTH_PROJECTS`:** itzg re-resolves it against the Modrinth API on
-  every boot, so a Modrinth outage crash-loops the server (this is why the
-  mods moved to R2). itzg leaves loose `/data/mods` jars alone because
-  `REMOVE_OLD_MODS` is unset; the initContainer also deletes any leftover
-  `.modrinth-manifest.json` so a stale record can never reconcile them
-  away. Upgrading one of these mods means uploading the new jar to R2 and
-  bumping its `*_OBJECT` value (README upgrade runbook), not editing a
-  Modrinth version ID.
+- The three server-only extra mods (GriefLogger, BlueMap, Prometheus
+  Exporter) are staged as loose jars in `/data/mods` from the `mc-mods` R2
+  bucket by the `stage-assets` initContainer, exactly like the pack. Each is
+  pinned by its R2 object name (`GRIEFLOGGER_OBJECT`, `BLUEMAP_OBJECT`,
+  `PROMEXPORTER_OBJECT`), which must equal the jar's exact on-disk filename.
+  **Do not reintroduce `MODRINTH_PROJECTS`:** itzg re-resolves it against the
+  Modrinth API on every boot, so a Modrinth outage crash-loops the server
+  (this is why GriefLogger and BlueMap moved to R2). itzg leaves loose
+  `/data/mods` jars alone because `REMOVE_OLD_MODS` is unset; the
+  initContainer also deletes any leftover `.modrinth-manifest.json` so a
+  stale record can never reconcile them away. Upgrading one of these mods
+  means uploading the new jar to R2 and bumping its `*_OBJECT` value (README
+  upgrade runbook), not editing a Modrinth version ID. The Prometheus
+  Exporter's jar comes from the mod's GitHub Releases (not a mod host);
+  mirror it into R2 under the same name.
+- The Prometheus Exporter mod serves `/metrics` on port 19565 (container
+  port `metrics`), exposed cluster-internal via the `mc-metrics` ClusterIP
+  Service, never external. The scrape (`ServiceMonitor`) and Grafana
+  dashboard live in the homelab repo under `workloads/mc/`, not here; the
+  dashboard is game-specific on purpose (players, TPS/MSPT, JVM heap/GC,
+  per-dimension tick/chunks/entities) and does not replot node or container
+  CPU/RAM, which the kube-prometheus-stack dashboards already cover.
+- FTB Chunks `force_load_mode = "always"` (offline force-loading for all
+  teams) is set by the `stage-assets` initContainer editing
+  `/data/config/ftbchunks-world.snbt` in place each boot (idempotent,
+  pre-JVM). This version replaced the old boolean `allow_offline_chunkloading`
+  with the `force_load_mode` enum; `always` is the old `true`. The file is
+  per-world state on the data volume, so the edit lives in the initContainer,
+  not a mounted config; our value wins every boot (an in-game change reverts).
 - World data on `local-path` (jade NVMe), backups on `longhorn`. Never
   swap those; replicated sync writes hurt the tick loop, and
   un-replicated backups defeat their purpose.
