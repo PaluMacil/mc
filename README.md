@@ -446,6 +446,16 @@ enrollment, Postgres database, secrets) is in `DEPLOY-PHASES-2-3.md`.
   cancel anyone's; cancellation is a soft revoke, audited, and blocks
   redemption). Names come from the OIDC `name`/`preferred_username` claim,
   so "created by" and the admin activity log read as people, not subjects.
+- **Downloads**: any signed-in user (guests included, so an invited friend
+  can set up before being whitelisted) gets a `/portal/downloads` page with
+  the ready-to-play client pack and a setup guide for the official
+  ("vanilla") Minecraft launcher. The pack is an object in the `mc-mods` R2
+  bucket (`INVITE_CLIENT_PACK_OBJECT`, default `atm10-7.1-client.zip`); the
+  app mints a short-lived SigV4 presigned GET URL (stdlib, no AWS SDK) and
+  302-redirects the browser straight to R2, so a ~1.5GB download never
+  streams through the single-replica pod (read-only rootfs, only
+  `ReadHeaderTimeout` set). It reuses the read-only `mc-r2` credentials; if
+  R2 is unset the page shows as unavailable instead of blocking startup.
 - **Flow**: an inviter signs in and mints a single-use link with a 7 day
   expiry (`INVITE_TTL`). The invitee (who signs in to nothing) opens the
   link and types their Minecraft Java username. The app resolves it to a

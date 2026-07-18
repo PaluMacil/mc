@@ -48,6 +48,23 @@ type Config struct {
 	// portal's nav. Same host, so relative paths by default.
 	SiteURL string
 	MapURL  string
+
+	// R2 (Cloudflare) settings for the authenticated Downloads page. The app
+	// mints short-lived presigned GET URLs and redirects the browser straight to
+	// R2, so the large client-pack download never streams through this pod.
+	// Endpoint and bucket are non-secret; the two keys come from the mc-r2
+	// Secret (read-only). If any are unset the Downloads page shows as
+	// unavailable rather than blocking the rest of the portal from starting.
+	R2Endpoint        string
+	R2Bucket          string
+	R2AccessKeyID     string
+	R2SecretAccessKey string
+
+	// ClientPackObject is the R2 object name of the ready-to-play client bundle
+	// offered on the Downloads page. R2PresignTTL bounds how long a minted link
+	// stays valid to START a download; the transfer itself may run past it.
+	ClientPackObject string
+	R2PresignTTL     time.Duration
 }
 
 // LoadConfig reads and validates configuration from the environment. It returns
@@ -56,19 +73,24 @@ type Config struct {
 // field per restart.
 func LoadConfig() (Config, error) {
 	c := Config{
-		ListenAddr:       envOr("INVITE_LISTEN_ADDR", ":8080"),
-		OIDCIssuer:       os.Getenv("INVITE_OIDC_ISSUER"),
-		OIDCClientID:     os.Getenv("INVITE_OIDC_CLIENT_ID"),
-		OIDCClientSecret: os.Getenv("INVITE_OIDC_CLIENT_SECRET"),
-		AdminGroup:       envOr("INVITE_ADMIN_GROUP", "mc-admin"),
-		InviterGroup:     envOr("INVITE_INVITER_GROUP", "mc-inviter"),
-		RCONAddr:         os.Getenv("INVITE_RCON_ADDR"),
-		RCONPassword:     os.Getenv("INVITE_RCON_PASSWORD"),
-		DatabaseURL:      os.Getenv("INVITE_DATABASE_URL"),
-		ServerAddress:    envOr("INVITE_SERVER_ADDRESS", "mc.danwolf.net"),
-		TZ:               envOr("INVITE_TZ", "America/Chicago"),
-		SiteURL:          envOr("INVITE_SITE_URL", "/"),
-		MapURL:           envOr("INVITE_MAP_URL", "/map/"),
+		ListenAddr:        envOr("INVITE_LISTEN_ADDR", ":8080"),
+		OIDCIssuer:        os.Getenv("INVITE_OIDC_ISSUER"),
+		OIDCClientID:      os.Getenv("INVITE_OIDC_CLIENT_ID"),
+		OIDCClientSecret:  os.Getenv("INVITE_OIDC_CLIENT_SECRET"),
+		AdminGroup:        envOr("INVITE_ADMIN_GROUP", "mc-admin"),
+		InviterGroup:      envOr("INVITE_INVITER_GROUP", "mc-inviter"),
+		RCONAddr:          os.Getenv("INVITE_RCON_ADDR"),
+		RCONPassword:      os.Getenv("INVITE_RCON_PASSWORD"),
+		DatabaseURL:       os.Getenv("INVITE_DATABASE_URL"),
+		ServerAddress:     envOr("INVITE_SERVER_ADDRESS", "mc.danwolf.net"),
+		TZ:                envOr("INVITE_TZ", "America/Chicago"),
+		SiteURL:           envOr("INVITE_SITE_URL", "/"),
+		MapURL:            envOr("INVITE_MAP_URL", "/map/"),
+		R2Endpoint:        os.Getenv("INVITE_R2_ENDPOINT"),
+		R2Bucket:          os.Getenv("INVITE_R2_BUCKET"),
+		R2AccessKeyID:     os.Getenv("INVITE_R2_ACCESS_KEY_ID"),
+		R2SecretAccessKey: os.Getenv("INVITE_R2_SECRET_ACCESS_KEY"),
+		ClientPackObject:  envOr("INVITE_CLIENT_PACK_OBJECT", "atm10-7.1-client.zip"),
 	}
 
 	var errs []error
@@ -93,6 +115,15 @@ func LoadConfig() (Config, error) {
 		errs = append(errs, fmt.Errorf("INVITE_TTL %q must be positive", ttl))
 	} else {
 		c.InviteTTL = d
+	}
+
+	presignTTL := envOr("INVITE_R2_PRESIGN_TTL", "1h")
+	if d, err := time.ParseDuration(presignTTL); err != nil {
+		errs = append(errs, fmt.Errorf("parsing INVITE_R2_PRESIGN_TTL %q: %w", presignTTL, err))
+	} else if d <= 0 {
+		errs = append(errs, fmt.Errorf("INVITE_R2_PRESIGN_TTL %q must be positive", presignTTL))
+	} else {
+		c.R2PresignTTL = d
 	}
 
 	for name, v := range map[string]string{

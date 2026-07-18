@@ -37,7 +37,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: mc-invite
-          image: ghcr.io/palumacil/mc-invite:v0.4.1
+          image: ghcr.io/palumacil/mc-invite:v0.6.0
           env:
             - name: INVITE_LISTEN_ADDR
               value: ":8080"
@@ -72,6 +72,19 @@ spec:
             # Invite link lifetime. 7 days per the design.
             - name: INVITE_TTL
               value: 168h
+            # R2 for the authenticated Downloads page. The app mints short-lived
+            # presigned GET URLs and 302-redirects the browser straight to R2, so
+            # the ~1.5GB client-pack download never streams through this pod
+            # (which has a read-only rootfs and only ReadHeaderTimeout set).
+            # Endpoint and bucket are the same non-secret values the game
+            # StatefulSet uses; CLIENT_PACK_OBJECT is the object to serve (upload
+            # the ready-to-play client bundle to mc-mods under this exact name).
+            - name: INVITE_R2_ENDPOINT
+              value: https://420bf1d048967f710944f505aebf45ca.r2.cloudflarestorage.com
+            - name: INVITE_R2_BUCKET
+              value: mc-mods
+            - name: INVITE_CLIENT_PACK_OBJECT
+              value: atm10-7.1-client.zip
             # Secrets. OIDC client secret from the ESO-materialized "minecraft"
             # Secret (kv/mc/minecraft); DB connection URI (points at the CNPG
             # pooler) from the imperative minecraft-db-credentials basic-auth
@@ -92,6 +105,20 @@ spec:
                 secretKeyRef:
                   name: mc-secrets
                   key: rcon-password
+            # Read-only R2 credentials (same mc-r2 Secret the game StatefulSet's
+            # stage-assets initContainer uses). Read-only is all a presigned GET
+            # needs. Absent these, the Downloads page shows as unavailable rather
+            # than blocking the portal from starting.
+            - name: INVITE_R2_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: mc-r2
+                  key: access-key-id
+            - name: INVITE_R2_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: mc-r2
+                  key: secret-access-key
           ports:
             - name: http
               containerPort: 8080

@@ -71,6 +71,21 @@ func run(log *slog.Logger) error {
 		return fmt.Errorf("oidc setup: %w", err)
 	}
 
+	// The Downloads page mints presigned R2 URLs. If R2 is not configured, leave
+	// the presigner nil and let the page show as unavailable rather than blocking
+	// the rest of the portal from starting.
+	var presign presigner
+	if cfg.R2Endpoint != "" && cfg.R2Bucket != "" && cfg.R2AccessKeyID != "" && cfg.R2SecretAccessKey != "" {
+		presign = r2Presigner{
+			endpoint:  cfg.R2Endpoint,
+			bucket:    cfg.R2Bucket,
+			accessKey: cfg.R2AccessKeyID,
+			secretKey: cfg.R2SecretAccessKey,
+		}
+	} else {
+		log.Warn("R2 not configured; the downloads page will show as unavailable")
+	}
+
 	srv := &Server{
 		cfg:      cfg,
 		store:    store,
@@ -78,6 +93,7 @@ func run(log *slog.Logger) error {
 		sessions: sessions,
 		mojang:   MojangResolver{},
 		rcon:     RCONClient{Addr: cfg.RCONAddr, Password: cfg.RCONPassword},
+		presign:  presign,
 		players:  &playersCache{ttl: 10 * time.Second},
 		limiter:  newIPLimiter(5, 30*time.Second),
 		loc:      loc,

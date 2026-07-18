@@ -108,82 +108,105 @@ func Layout(title string, nav NavVM) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\">Map</a></nav>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\">Map</a> ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if nav.SignedIn {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<a href=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var7 templ.SafeURL
+			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(nav.DownloadsURL))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 23, Col: 47}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\">Downloads</a>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</nav>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if !nav.HideAuth {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<div class=\"authnav\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<div class=\"authnav\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			if nav.SignedIn {
 				if nav.IsAdmin {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<span class=\"pill admin\">admin</span>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<span class=\"pill admin\">admin</span>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 				} else if nav.IsInviter {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<span class=\"pill\">inviter</span>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<span class=\"pill\">inviter</span>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, " <span class=\"who\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, " <span class=\"who\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var7 string
-				templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(nav.Name)
+				var templ_7745c5c3_Var8 string
+				templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(nav.Name)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 31, Col: 35}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</span><form method=\"post\" action=\"")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				var templ_7745c5c3_Var8 templ.SafeURL
-				templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(nav.LogoutURL))
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 32, Col: 64}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 34, Col: 35}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\"><button class=\"linkbtn\" type=\"submit\">Sign out</button></form>")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-			} else {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "<a class=\"linkbtn\" href=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</span><form method=\"post\" action=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var9 templ.SafeURL
-				templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(nav.LoginURL))
+				templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(nav.LogoutURL))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 36, Col: 60}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 35, Col: 64}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\">Sign in</a>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "\"><button class=\"linkbtn\" type=\"submit\">Sign out</button></form>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			} else {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "<a class=\"linkbtn\" href=\"")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var10 templ.SafeURL
+				templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(nav.LoginURL))
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 39, Col: 60}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "\">Sign in</a>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "</div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</header><main class=\"wrap\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "</header><main class=\"wrap\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -191,7 +214,7 @@ func Layout(title string, nav NavVM) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</main><script>\n\t\t\t\t// Copy the text of the button's previous sibling (an invite link\n\t\t\t\t// or an address). No-op if the clipboard API is unavailable.\n\t\t\t\tfunction mcCopy(btn) {\n\t\t\t\t\tvar el = btn.previousElementSibling;\n\t\t\t\t\tif (!el || !navigator.clipboard) return;\n\t\t\t\t\tnavigator.clipboard.writeText(el.textContent.trim()).then(function () {\n\t\t\t\t\t\tvar old = btn.textContent;\n\t\t\t\t\t\tbtn.textContent = \"Copied\";\n\t\t\t\t\t\tsetTimeout(function () { btn.textContent = old; }, 1200);\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script></body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "</main><script>\n\t\t\t\t// Copy the text of the button's previous sibling (an invite link\n\t\t\t\t// or an address). No-op if the clipboard API is unavailable.\n\t\t\t\tfunction mcCopy(btn) {\n\t\t\t\t\tvar el = btn.previousElementSibling;\n\t\t\t\t\tif (!el || !navigator.clipboard) return;\n\t\t\t\t\tnavigator.clipboard.writeText(el.textContent.trim()).then(function () {\n\t\t\t\t\t\tvar old = btn.textContent;\n\t\t\t\t\t\tbtn.textContent = \"Copied\";\n\t\t\t\t\t\tsetTimeout(function () { btn.textContent = old; }, 1200);\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script></body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -215,12 +238,12 @@ func styles() templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var10 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var10 == nil {
-			templ_7745c5c3_Var10 = templ.NopComponent
+		templ_7745c5c3_Var11 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var11 == nil {
+			templ_7745c5c3_Var11 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "<style>\n\t\t:root {\n\t\t\t--bg:#14161a; --panel:#1e2128; --panel2:#262a33; --text:#e8eaed;\n\t\t\t--muted:#a7adba; --accent:#5db462; --accent2:#7fd884; --border:#333844;\n\t\t\t--code:#0f1115; --danger:#e06c75; --danger-bg:#3a1e20; --danger-border:#7a3236;\n\t\t\t--ok-bg:#1d3324; --ok-border:#2f6b41;\n\t\t}\n\t\t@media (prefers-color-scheme: light) {\n\t\t\t:root {\n\t\t\t\t--bg:#f4f6f8; --panel:#fff; --panel2:#eef1f5; --text:#1b1e24;\n\t\t\t\t--muted:#566072; --accent:#2f8f43; --accent2:#257035; --border:#d7dde5;\n\t\t\t\t--code:#eef1f5; --danger:#b3261e; --danger-bg:#fbe9e7; --danger-border:#e2a19c;\n\t\t\t\t--ok-bg:#e7f4ea; --ok-border:#9bcfa8;\n\t\t\t}\n\t\t}\n\t\t* { box-sizing:border-box; }\n\t\tbody { margin:0; background:var(--bg); color:var(--text);\n\t\t\tfont:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }\n\t\ta { color:var(--accent2); }\n\t\t.topbar { display:flex; align-items:center; flex-wrap:wrap;\n\t\t\tgap:0.6rem 1.1rem; padding:0.8rem 1.1rem; border-bottom:1px solid var(--border); background:var(--panel); }\n\t\t.brand { font-weight:700; text-decoration:none; color:var(--text); }\n\t\t.mainnav { display:flex; gap:1rem; }\n\t\t.mainnav a { color:var(--muted); text-decoration:none; }\n\t\t.mainnav a:hover { color:var(--text); }\n\t\t.authnav { display:flex; align-items:center; gap:0.7rem; margin-left:auto; }\n\t\t.who { color:var(--muted); font-size:0.9rem; }\n\t\t.pill { background:var(--panel2); border:1px solid var(--border); color:var(--muted);\n\t\t\tborder-radius:999px; padding:0.1rem 0.6rem; font-size:0.78rem; }\n\t\t.pill.admin { background:var(--accent); color:#06210b; border-color:transparent; font-weight:700; }\n\t\t.linkbtn { font:inherit; font-size:0.9rem; background:none; border:0; color:var(--accent2);\n\t\t\tcursor:pointer; padding:0; text-decoration:underline; }\n\t\t.wrap { max-width:820px; margin:0 auto; padding:1.6rem 1.1rem 4rem; }\n\t\th1 { font-size:1.6rem; margin:0.4rem 0 0.2rem; }\n\t\th2 { font-size:1.2rem; margin:2rem 0 0.6rem; }\n\t\tp.lead { color:var(--muted); margin-top:0; }\n\t\t.card { background:var(--panel); border:1px solid var(--border); border-radius:12px;\n\t\t\tpadding:1.1rem 1.2rem; margin:1.1rem 0; }\n\t\t.btn { display:inline-block; font:inherit; font-weight:600; cursor:pointer;\n\t\t\tbackground:var(--accent); color:#06210b; border:0; border-radius:9px; padding:0.6rem 1rem; text-decoration:none; }\n\t\t.btn:hover { background:var(--accent2); }\n\t\t.btn[disabled] { opacity:0.5; cursor:not-allowed; }\n\t\tinput[type=text] { font:inherit; width:100%; padding:0.6rem 0.7rem; border-radius:8px;\n\t\t\tborder:1px solid var(--border); background:var(--code); color:var(--text); }\n\t\tlabel { display:block; font-weight:600; margin-bottom:0.3rem; }\n\t\t.link { display:flex; gap:0.5rem; align-items:center; margin-top:0.6rem; }\n\t\t.link code { flex:1; background:var(--code); border:1px solid var(--border); border-radius:8px;\n\t\t\tpadding:0.55rem 0.7rem; overflow-x:auto; white-space:nowrap; font-family:ui-monospace,Menlo,Consolas,monospace; }\n\t\t.muted { color:var(--muted); }\n\t\ttable { width:100%; border-collapse:collapse; margin-top:0.6rem; font-size:0.94rem; }\n\t\tth,td { text-align:left; padding:0.5rem 0.6rem; border-bottom:1px solid var(--border); vertical-align:top; }\n\t\tth { color:var(--muted); font-weight:600; }\n\t\t.status-active { color:var(--accent2); font-weight:600; }\n\t\t.status-used { color:var(--muted); }\n\t\t.status-expired { color:var(--danger); }\n\t\t.notice { border-radius:10px; padding:0.8rem 1rem; margin:1rem 0; }\n\t\t.notice.err { background:var(--danger-bg); border:1px solid var(--danger-border); color:var(--danger); }\n\t\t.notice.ok { background:var(--ok-bg); border:1px solid var(--ok-border); }\n\t\t.detail { color:var(--muted); }\n\t\t.statusbar { display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;\n\t\t\tbackground:var(--panel); border:1px solid var(--border); border-radius:10px;\n\t\t\tpadding:0.6rem 0.9rem; margin:1rem 0; }\n\t\t.dot { width:0.6rem; height:0.6rem; border-radius:50%; background:var(--accent); display:inline-block; }\n\t\t.dot.off { background:var(--muted); }\n\t\t.pcount { font-weight:700; }\n\t\t.pnames { color:var(--muted); display:flex; gap:0.35rem; flex-wrap:wrap; align-items:center; }\n\t\t.pchip { background:var(--panel2); border:1px solid var(--border); color:var(--text);\n\t\t\tborder-radius:999px; padding:0.05rem 0.55rem; font-size:0.85rem; }\n\t\t.statusbar .maplink { margin-left:auto; }\n\t\t.cancelbtn { font:inherit; font-size:0.82rem; cursor:pointer; background:none;\n\t\t\tborder:1px solid var(--border); color:var(--danger); border-radius:6px; padding:0.2rem 0.5rem; }\n\t\t.cancelbtn:hover { background:var(--danger-bg); }\n\t\t.status-canceled { color:var(--muted); text-decoration:line-through; }\n\t</style>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<style>\n\t\t:root {\n\t\t\t--bg:#14161a; --panel:#1e2128; --panel2:#262a33; --text:#e8eaed;\n\t\t\t--muted:#a7adba; --accent:#5db462; --accent2:#7fd884; --border:#333844;\n\t\t\t--code:#0f1115; --danger:#e06c75; --danger-bg:#3a1e20; --danger-border:#7a3236;\n\t\t\t--ok-bg:#1d3324; --ok-border:#2f6b41;\n\t\t}\n\t\t@media (prefers-color-scheme: light) {\n\t\t\t:root {\n\t\t\t\t--bg:#f4f6f8; --panel:#fff; --panel2:#eef1f5; --text:#1b1e24;\n\t\t\t\t--muted:#566072; --accent:#2f8f43; --accent2:#257035; --border:#d7dde5;\n\t\t\t\t--code:#eef1f5; --danger:#b3261e; --danger-bg:#fbe9e7; --danger-border:#e2a19c;\n\t\t\t\t--ok-bg:#e7f4ea; --ok-border:#9bcfa8;\n\t\t\t}\n\t\t}\n\t\t* { box-sizing:border-box; }\n\t\tbody { margin:0; background:var(--bg); color:var(--text);\n\t\t\tfont:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }\n\t\ta { color:var(--accent2); }\n\t\t.topbar { display:flex; align-items:center; flex-wrap:wrap;\n\t\t\tgap:0.6rem 1.1rem; padding:0.8rem 1.1rem; border-bottom:1px solid var(--border); background:var(--panel); }\n\t\t.brand { font-weight:700; text-decoration:none; color:var(--text); }\n\t\t.mainnav { display:flex; gap:1rem; }\n\t\t.mainnav a { color:var(--muted); text-decoration:none; }\n\t\t.mainnav a:hover { color:var(--text); }\n\t\t.authnav { display:flex; align-items:center; gap:0.7rem; margin-left:auto; }\n\t\t.who { color:var(--muted); font-size:0.9rem; }\n\t\t.pill { background:var(--panel2); border:1px solid var(--border); color:var(--muted);\n\t\t\tborder-radius:999px; padding:0.1rem 0.6rem; font-size:0.78rem; }\n\t\t.pill.admin { background:var(--accent); color:#06210b; border-color:transparent; font-weight:700; }\n\t\t.linkbtn { font:inherit; font-size:0.9rem; background:none; border:0; color:var(--accent2);\n\t\t\tcursor:pointer; padding:0; text-decoration:underline; }\n\t\t.wrap { max-width:820px; margin:0 auto; padding:1.6rem 1.1rem 4rem; }\n\t\th1 { font-size:1.6rem; margin:0.4rem 0 0.2rem; }\n\t\th2 { font-size:1.2rem; margin:2rem 0 0.6rem; }\n\t\tp.lead { color:var(--muted); margin-top:0; }\n\t\t.card { background:var(--panel); border:1px solid var(--border); border-radius:12px;\n\t\t\tpadding:1.1rem 1.2rem; margin:1.1rem 0; }\n\t\t.btn { display:inline-block; font:inherit; font-weight:600; cursor:pointer;\n\t\t\tbackground:var(--accent); color:#06210b; border:0; border-radius:9px; padding:0.6rem 1rem; text-decoration:none; }\n\t\t.btn:hover { background:var(--accent2); }\n\t\t.btn[disabled] { opacity:0.5; cursor:not-allowed; }\n\t\tinput[type=text] { font:inherit; width:100%; padding:0.6rem 0.7rem; border-radius:8px;\n\t\t\tborder:1px solid var(--border); background:var(--code); color:var(--text); }\n\t\tlabel { display:block; font-weight:600; margin-bottom:0.3rem; }\n\t\t.link { display:flex; gap:0.5rem; align-items:center; margin-top:0.6rem; }\n\t\t.link code { flex:1; background:var(--code); border:1px solid var(--border); border-radius:8px;\n\t\t\tpadding:0.55rem 0.7rem; overflow-x:auto; white-space:nowrap; font-family:ui-monospace,Menlo,Consolas,monospace; }\n\t\t.muted { color:var(--muted); }\n\t\ttable { width:100%; border-collapse:collapse; margin-top:0.6rem; font-size:0.94rem; }\n\t\tth,td { text-align:left; padding:0.5rem 0.6rem; border-bottom:1px solid var(--border); vertical-align:top; }\n\t\tth { color:var(--muted); font-weight:600; }\n\t\t.status-active { color:var(--accent2); font-weight:600; }\n\t\t.status-used { color:var(--muted); }\n\t\t.status-expired { color:var(--danger); }\n\t\t.notice { border-radius:10px; padding:0.8rem 1rem; margin:1rem 0; }\n\t\t.notice.err { background:var(--danger-bg); border:1px solid var(--danger-border); color:var(--danger); }\n\t\t.notice.ok { background:var(--ok-bg); border:1px solid var(--ok-border); }\n\t\t.detail { color:var(--muted); }\n\t\t.statusbar { display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;\n\t\t\tbackground:var(--panel); border:1px solid var(--border); border-radius:10px;\n\t\t\tpadding:0.6rem 0.9rem; margin:1rem 0; }\n\t\t.dot { width:0.6rem; height:0.6rem; border-radius:50%; background:var(--accent); display:inline-block; }\n\t\t.dot.off { background:var(--muted); }\n\t\t.pcount { font-weight:700; }\n\t\t.pnames { color:var(--muted); display:flex; gap:0.35rem; flex-wrap:wrap; align-items:center; }\n\t\t.pchip { background:var(--panel2); border:1px solid var(--border); color:var(--text);\n\t\t\tborder-radius:999px; padding:0.05rem 0.55rem; font-size:0.85rem; }\n\t\t.statusbar .maplink { margin-left:auto; }\n\t\t.cancelbtn { font:inherit; font-size:0.82rem; cursor:pointer; background:none;\n\t\t\tborder:1px solid var(--border); color:var(--danger); border-radius:6px; padding:0.2rem 0.5rem; }\n\t\t.cancelbtn:hover { background:var(--danger-bg); }\n\t\t.status-canceled { color:var(--muted); text-decoration:line-through; }\n\t</style>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

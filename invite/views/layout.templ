@@ -19,6 +19,9 @@ templ Layout(title string, nav NavVM) {
 				<nav class="mainnav">
 					<a href={ templ.SafeURL(nav.LandingURL) }>Home</a>
 					<a href={ templ.SafeURL(nav.MapURL) }>Map</a>
+					if nav.SignedIn {
+						<a href={ templ.SafeURL(nav.DownloadsURL) }>Downloads</a>
+					}
 				</nav>
 				if !nav.HideAuth {
 					<div class="authnav">

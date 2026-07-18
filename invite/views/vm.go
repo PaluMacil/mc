@@ -7,17 +7,18 @@ package views
 // NavVM is the shared header. All URLs are absolute paths already carrying the
 // app's base path (or the site-relative landing/map paths).
 type NavVM struct {
-	HomeURL    string // portal dashboard
-	LandingURL string // main site landing page
-	MapURL     string // live world map
-	LoginURL   string
-	LogoutURL  string
-	HtmxSrc    string
-	SignedIn   bool
-	Name       string
-	IsAdmin    bool
-	IsInviter  bool
-	HideAuth   bool // public pages (invite redemption) show no auth controls
+	HomeURL      string // portal dashboard
+	DownloadsURL string // client pack + setup guide (shown only when signed in)
+	LandingURL   string // main site landing page
+	MapURL       string // live world map
+	LoginURL     string
+	LogoutURL    string
+	HtmxSrc      string
+	SignedIn     bool
+	Name         string
+	IsAdmin      bool
+	IsInviter    bool
+	HideAuth     bool // public pages (invite redemption) show no auth controls
 }
 
 // InviteRowVM is one row of the invite table.
@@ -86,4 +87,25 @@ type RedeemDoneVM struct {
 	Nav           NavVM
 	MinecraftName string
 	ServerAddress string
+}
+
+// DownloadsVM drives the authenticated downloads page: the client-pack links
+// and the vanilla-launcher setup guide.
+type DownloadsVM struct {
+	Nav           NavVM
+	Available     bool             // false when R2 is not configured; hides the links
+	Files         []DownloadFileVM // things to download (currently the client pack)
+	ServerAddress string           // primary connect address
+	FallbackAddr  string           // explicit host:port fallback
+	MapURL        string
+	NeoForge      string // required NeoForge version, e.g. 21.1.234
+	PackVersion   string // pack version the server runs, e.g. 7.1
+}
+
+// DownloadFileVM is one downloadable file. URL is a GET endpoint on this app
+// that 302-redirects to a short-lived presigned R2 URL.
+type DownloadFileVM struct {
+	Title string
+	Desc  string
+	URL   string
 }

@@ -155,4 +155,9 @@ server; gate those on an empty server.
   signed-in user with no `mc-admin`/`mc-inviter` role is a guest and gets
   the pending page. It is a single replica (in-memory sessions); do not
   scale without a shared session store. Integration tests need Postgres
-  (`INVITE_TEST_DATABASE_URL`); CI provides one.
+  (`INVITE_TEST_DATABASE_URL`); CI provides one. The `/portal/downloads`
+  page serves the client pack from R2 via a stdlib SigV4 presigned URL
+  (`r2.go`; do not pull in the AWS SDK to keep the app lean) and a 302
+  redirect, so the pod never proxies the multi-GB file; it reuses the
+  read-only `mc-r2` Secret. Never presign a user-supplied object key: the
+  downloadable set is a fixed server-side table (`downloadItems`).
