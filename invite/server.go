@@ -317,12 +317,16 @@ func (s *Server) playersHandler(w http.ResponseWriter, r *http.Request) {
 // fetches it to turn its "Sign in" link into the member's name when signed in.
 func (s *Server) whoami(w http.ResponseWriter, r *http.Request) {
 	resp := struct {
-		SignedIn bool   `json:"signedIn"`
-		Name     string `json:"name,omitempty"`
+		SignedIn  bool   `json:"signedIn"`
+		Name      string `json:"name,omitempty"`
+		IsAdmin   bool   `json:"isAdmin,omitempty"`
+		IsInviter bool   `json:"isInviter,omitempty"`
 	}{}
 	if u, ok := s.auth.currentUser(r.Context()); ok {
 		resp.SignedIn = true
 		resp.Name = u.DisplayName()
+		resp.IsAdmin = u.IsAdmin()
+		resp.IsInviter = u.IsInviter()
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
@@ -439,6 +443,9 @@ func (s *Server) nav(u User, public bool) views.NavVM {
 		LogoutURL:    base + "/logout",
 		LandingURL:   s.cfg.SiteURL,
 		MapURL:       s.cfg.MapURL,
+		TipsURL:      s.cfg.TipsURL,
+		ParentsURL:   s.cfg.ParentsURL,
+		MetricsURL:   s.cfg.MetricsURL,
 		HideAuth:     public,
 	}
 	if !public {

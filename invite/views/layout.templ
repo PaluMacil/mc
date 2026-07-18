@@ -15,26 +15,39 @@ templ Layout(title string, nav NavVM) {
 		</head>
 		<body>
 			<header class="topbar">
-				<a class="brand" href={ templ.SafeURL(nav.HomeURL) }>ATM10 portal</a>
+				<a class="brand" href={ templ.SafeURL(nav.LandingURL) }>All the Mods 10</a>
 				<nav class="mainnav">
 					<a href={ templ.SafeURL(nav.LandingURL) }>Home</a>
-					<a href={ templ.SafeURL(nav.MapURL) }>Map</a>
+					<a href={ templ.SafeURL(nav.MapURL) }>Live map</a>
+					<a href={ templ.SafeURL(nav.TipsURL) }>Player tips</a>
+					<a href={ templ.SafeURL(nav.ParentsURL) }>Parent tips</a>
 					if nav.SignedIn {
+						<a href={ templ.SafeURL(nav.HomeURL) }>Dashboard</a>
 						<a href={ templ.SafeURL(nav.DownloadsURL) }>Downloads</a>
 					}
 				</nav>
 				if !nav.HideAuth {
 					<div class="authnav">
 						if nav.SignedIn {
-							if nav.IsAdmin {
-								<span class="pill admin">admin</span>
-							} else if nav.IsInviter {
-								<span class="pill">inviter</span>
-							}
-							<span class="who">{ nav.Name }</span>
-							<form method="post" action={ templ.SafeURL(nav.LogoutURL) }>
-								<button class="linkbtn" type="submit">Sign out</button>
-							</form>
+							<details class="usermenu">
+								<summary>
+									if nav.IsAdmin {
+										<span class="pill admin">admin</span>
+									} else if nav.IsInviter {
+										<span class="pill">inviter</span>
+									}
+									<span class="who">{ nav.Name }</span>
+									<span class="caret" aria-hidden="true">▾</span>
+								</summary>
+								<div class="menu">
+									if nav.IsAdmin && nav.MetricsURL != "" {
+										<a href={ templ.SafeURL(nav.MetricsURL) } target="_blank" rel="noopener">Metrics dashboard</a>
+									}
+									<form method="post" action={ templ.SafeURL(nav.LogoutURL) }>
+										<button class="menuitem" type="submit">Sign out</button>
+									</form>
+								</div>
+							</details>
 						} else {
 							<a class="linkbtn" href={ templ.SafeURL(nav.LoginURL) }>Sign in</a>
 						}
@@ -84,7 +97,7 @@ templ styles() {
 		.topbar { display:flex; align-items:center; flex-wrap:wrap;
 			gap:0.6rem 1.1rem; padding:0.8rem 1.1rem; border-bottom:1px solid var(--border); background:var(--panel); }
 		.brand { font-weight:700; text-decoration:none; color:var(--text); }
-		.mainnav { display:flex; gap:1rem; }
+		.mainnav { display:flex; gap:1rem; flex-wrap:wrap; }
 		.mainnav a { color:var(--muted); text-decoration:none; }
 		.mainnav a:hover { color:var(--text); }
 		.authnav { display:flex; align-items:center; gap:0.7rem; margin-left:auto; }
@@ -94,6 +107,22 @@ templ styles() {
 		.pill.admin { background:var(--accent); color:#06210b; border-color:transparent; font-weight:700; }
 		.linkbtn { font:inherit; font-size:0.9rem; background:none; border:0; color:var(--accent2);
 			cursor:pointer; padding:0; text-decoration:underline; }
+		/* Username dropdown (no JS): a <details> whose <summary> is the name. */
+		.usermenu { position:relative; }
+		.usermenu > summary { list-style:none; cursor:pointer; display:flex; align-items:center;
+			gap:0.4rem; padding:0.25rem 0.5rem; border:1px solid var(--border); border-radius:8px;
+			background:var(--panel2); }
+		.usermenu > summary::-webkit-details-marker { display:none; }
+		.usermenu > summary:hover, .usermenu[open] > summary { border-color:var(--muted); }
+		.usermenu .caret { color:var(--muted); font-size:0.75rem; }
+		.usermenu .menu { position:absolute; right:0; top:calc(100% + 0.35rem); min-width:12rem;
+			background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:0.35rem;
+			display:flex; flex-direction:column; gap:0.1rem; box-shadow:0 8px 24px rgba(0,0,0,0.35); z-index:20; }
+		.usermenu .menu form { margin:0; }
+		.usermenu .menu a, .usermenu .menu .menuitem { display:block; width:100%; text-align:left;
+			font:inherit; font-size:0.92rem; color:var(--text); text-decoration:none; background:none;
+			border:0; cursor:pointer; padding:0.45rem 0.6rem; border-radius:7px; }
+		.usermenu .menu a:hover, .usermenu .menu .menuitem:hover { background:var(--panel2); }
 		.wrap { max-width:820px; margin:0 auto; padding:1.6rem 1.1rem 4rem; }
 		h1 { font-size:1.6rem; margin:0.4rem 0 0.2rem; }
 		h2 { font-size:1.2rem; margin:2rem 0 0.6rem; }

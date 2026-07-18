@@ -59,6 +59,39 @@ func TestDownloadsRequiresAuth(t *testing.T) {
 	require.Equal(t, http.StatusFound, code, "unauthenticated downloads redirects to login")
 }
 
+func TestNavAdminDropdown(t *testing.T) {
+	render := func(nav views.NavVM) string {
+		var buf bytes.Buffer
+		require.NoError(t, views.Pending(nav).Render(context.Background(), &buf))
+		return buf.String()
+	}
+	base := views.NavVM{
+		LandingURL: "/", MapURL: "/map/", TipsURL: "/tips", ParentsURL: "/parents",
+		HomeURL: "/portal/", DownloadsURL: "/portal/downloads", LogoutURL: "/portal/logout",
+		LoginURL: "/portal/login", MetricsURL: "https://grafana.example/d/mc",
+	}
+
+	admin := base
+	admin.SignedIn, admin.Name, admin.IsAdmin = true, "Palu", true
+	out := render(admin)
+	require.Contains(t, out, `class="usermenu"`)
+	require.Contains(t, out, "Metrics dashboard")
+	require.Contains(t, out, "grafana.example/d/mc")
+	require.Contains(t, out, "Player tips") // public link kept when signed in
+	require.Contains(t, out, "Dashboard")   // member link in the bar
+	require.Contains(t, out, "Downloads")
+
+	guest := base
+	guest.SignedIn, guest.Name = true, "Guest"
+	out = render(guest)
+	require.Contains(t, out, "Sign out")
+	require.NotContains(t, out, "Metrics dashboard") // admin-only
+
+	out = render(base) // signed out
+	require.Contains(t, out, "Sign in")
+	require.NotContains(t, out, `class="usermenu"`)
+}
+
 func TestDownloadsPageRenders(t *testing.T) {
 	vm := views.DownloadsVM{
 		Nav:           views.NavVM{SignedIn: true, DownloadsURL: "/invite/downloads"},

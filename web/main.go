@@ -41,6 +41,7 @@ type pageData struct {
 	TipsPath        string
 	PlayersURL      string
 	WhoamiURL       string
+	MetricsURL      string
 	Year            int
 }
 
@@ -55,6 +56,7 @@ func main() {
 	tipsPath := flag.String("tips-path", "/tips", "path of the player tips page")
 	playersURL := flag.String("players-url", "/portal/players", "same-origin endpoint returning the online-players fragment")
 	whoamiURL := flag.String("whoami-url", "/portal/whoami", "same-origin endpoint reporting the visitor's sign-in state")
+	metricsURL := flag.String("metrics-url", "https://grafana.danwolf.net/d/mc-atm10", "Grafana dashboard, shown in the admin user-menu (tailnet-only)")
 	flag.Parse()
 
 	data := pageData{
@@ -67,6 +69,7 @@ func main() {
 		TipsPath:        *tipsPath,
 		PlayersURL:      *playersURL,
 		WhoamiURL:       *whoamiURL,
+		MetricsURL:      *metricsURL,
 		Year:            time.Now().Year(),
 	}
 

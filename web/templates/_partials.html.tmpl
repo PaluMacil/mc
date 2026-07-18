@@ -1,36 +1,86 @@
 {{/*
-Shared fragments for the static public pages so the nav and the sign-in-state
-script stay identical across index, tips, and parents. This file defines only
-named templates; it is never rendered on its own. Each page supplies its own
-<style>, so the nav relies on that page's .topnav rules.
+Shared header for the static public pages so the bar, sign-in state, and the
+member dropdown stay identical to the portal (mc-invite). This file defines only
+named templates; it is never rendered on its own. "topnav" carries its own
+<style> (the color tokens come from each page's :root) and is placed as a direct
+body child, so the bar is full width like the portal's. "authscript" reveals the
+member links and swaps "Sign in" for the user dropdown once the portal reports
+the visitor is signed in (admins also get the metrics link). A <div>, not a
+<header>, so the pages' own header{} hero rule does not style the bar.
 */}}
 {{define "topnav" -}}
-<nav class="topnav">
+<style>
+  .topbar { display:flex; align-items:center; flex-wrap:wrap; gap:0.6rem 1.1rem;
+    padding:0.8rem 1.1rem; border-bottom:1px solid var(--border); background:var(--panel); }
+  .topbar .brand { font-weight:700; text-decoration:none; color:var(--text); }
+  .topbar .mainnav { display:flex; gap:1rem; flex-wrap:wrap; }
+  .topbar .mainnav a { color:var(--muted); text-decoration:none; font-weight:600; }
+  .topbar .mainnav a:hover { color:var(--text); }
+  .topbar .authnav { display:flex; align-items:center; gap:0.7rem; margin-left:auto; }
+  .topbar .who { color:var(--text); font-size:0.9rem; }
+  .topbar .pill { background:var(--panel2); border:1px solid var(--border); color:var(--muted);
+    border-radius:999px; padding:0.1rem 0.6rem; font-size:0.78rem; }
+  .topbar .pill.admin { background:var(--accent); color:#06210b; border-color:transparent; font-weight:700; }
+  .topbar .linkbtn { font:inherit; font-size:0.9rem; background:none; border:0; color:var(--accent2);
+    cursor:pointer; padding:0; text-decoration:underline; }
+  .usermenu { position:relative; }
+  .usermenu > summary { list-style:none; cursor:pointer; display:flex; align-items:center; gap:0.4rem;
+    padding:0.25rem 0.5rem; border:1px solid var(--border); border-radius:8px; background:var(--panel2); }
+  .usermenu > summary::-webkit-details-marker { display:none; }
+  .usermenu > summary:hover, .usermenu[open] > summary { border-color:var(--muted); }
+  .usermenu .caret { color:var(--muted); font-size:0.75rem; }
+  .usermenu .menu { position:absolute; right:0; top:calc(100% + 0.35rem); min-width:12rem;
+    background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:0.35rem;
+    display:flex; flex-direction:column; gap:0.1rem; box-shadow:0 8px 24px rgba(0,0,0,0.35); z-index:20; }
+  .usermenu .menu form { margin:0; }
+  .usermenu .menu a, .usermenu .menu .menuitem { display:block; width:100%; text-align:left; font:inherit;
+    font-size:0.92rem; color:var(--text); text-decoration:none; background:none; border:0; cursor:pointer;
+    padding:0.45rem 0.6rem; border-radius:7px; }
+  .usermenu .menu a:hover, .usermenu .menu .menuitem:hover { background:var(--panel2); }
+</style>
+<div class="topbar">
+  <a class="brand" href="/">All the Mods 10</a>
+  <nav class="mainnav">
     <a href="/">Home</a>
     <a href="{{.MapPath}}">Live map</a>
     <a href="{{.TipsPath}}">Player tips</a>
     <a href="{{.ParentsPath}}">Parent tips</a>
-    <a id="nav-portal" href="{{.PortalPath}}">Sign in</a>
+    <a class="member" href="{{.PortalPath}}" hidden>Dashboard</a>
+    <a class="member" href="{{.PortalPath}}downloads" hidden>Downloads</a>
   </nav>
+  <div class="authnav">
+    <a id="nav-signin" class="linkbtn" href="{{.PortalPath}}">Sign in</a>
+    <details id="nav-usermenu" class="usermenu" hidden>
+      <summary><span class="who" id="nav-username"></span><span class="caret" aria-hidden="true">&#9662;</span></summary>
+      <div class="menu">
+        <a id="nav-metrics" href="{{.MetricsURL}}" target="_blank" rel="noopener" hidden>Metrics dashboard</a>
+        <form method="post" action="{{.PortalPath}}logout"><button class="menuitem" type="submit">Sign out</button></form>
+      </div>
+    </details>
+  </div>
+</div>
 {{- end}}
 
 {{define "authscript" -}}
 <script>
-  // These public pages are static and have no session of their own. Ask the
-  // portal (same origin) who we are; if signed in, turn the "Sign in" link into
-  // the member's name pointing at their dashboard. Silent no-op if unreachable,
-  // so the link falls back to plain "Sign in".
+  // These public pages have no session of their own. Ask the portal (same
+  // origin) who we are; when signed in, reveal the member links and swap the
+  // "Sign in" link for the user dropdown (admins also get the metrics link).
+  // Silent no-op if unreachable, so the page stays in its signed-out form.
   (function () {
-    var link = document.getElementById("nav-portal");
-    if (!link) return;
     fetch({{.WhoamiURL}}, { headers: { "Accept": "application/json" }, credentials: "same-origin" })
       .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
       .then(function (me) {
-        if (me && me.signedIn) {
-          link.textContent = me.name || "My portal";
-          link.classList.add("signedin");
-          link.setAttribute("aria-label", "Signed in as " + (me.name || "member") + "; open the member portal");
-        }
+        if (!me || !me.signedIn) return;
+        var signin = document.getElementById("nav-signin");
+        var menu = document.getElementById("nav-usermenu");
+        var uname = document.getElementById("nav-username");
+        var metrics = document.getElementById("nav-metrics");
+        if (signin) signin.hidden = true;
+        if (uname) uname.textContent = me.name || "Member";
+        if (menu) menu.hidden = false;
+        if (metrics && me.isAdmin) metrics.hidden = false;
+        document.querySelectorAll(".mainnav a.member").forEach(function (el) { el.hidden = false; });
       })
       .catch(function () {});
   })();

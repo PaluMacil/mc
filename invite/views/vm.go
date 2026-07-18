@@ -7,10 +7,13 @@ package views
 // NavVM is the shared header. All URLs are absolute paths already carrying the
 // app's base path (or the site-relative landing/map paths).
 type NavVM struct {
-	HomeURL      string // portal dashboard
-	DownloadsURL string // client pack + setup guide (shown only when signed in)
-	LandingURL   string // main site landing page
+	HomeURL      string // portal dashboard (the "Dashboard" member link)
+	DownloadsURL string // client pack + setup guide (member link)
+	LandingURL   string // main site landing page (the brand + "Home")
 	MapURL       string // live world map
+	TipsURL      string // player tips page (on the landing site)
+	ParentsURL   string // parent tips page (on the landing site)
+	MetricsURL   string // Grafana dashboard, shown in the admin dropdown only
 	LoginURL     string
 	LogoutURL    string
 	HtmxSrc      string

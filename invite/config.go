@@ -49,6 +49,13 @@ type Config struct {
 	SiteURL string
 	MapURL  string
 
+	// TipsURL and ParentsURL are the landing-site tip pages, shown in the shared
+	// nav so the portal carries the same links as the public pages. MetricsURL is
+	// the Grafana dashboard, linked from the admin-only user dropdown.
+	TipsURL    string
+	ParentsURL string
+	MetricsURL string
+
 	// R2 (Cloudflare) settings for the authenticated Downloads page. The app
 	// mints short-lived presigned GET URLs and redirects the browser straight to
 	// R2, so the large client-pack download never streams through this pod.
@@ -86,6 +93,9 @@ func LoadConfig() (Config, error) {
 		TZ:                envOr("INVITE_TZ", "America/Chicago"),
 		SiteURL:           envOr("INVITE_SITE_URL", "/"),
 		MapURL:            envOr("INVITE_MAP_URL", "/map/"),
+		TipsURL:           envOr("INVITE_TIPS_URL", "/tips"),
+		ParentsURL:        envOr("INVITE_PARENTS_URL", "/parents"),
+		MetricsURL:        envOr("INVITE_METRICS_URL", "https://grafana.danwolf.net/d/mc-atm10"),
 		R2Endpoint:        os.Getenv("INVITE_R2_ENDPOINT"),
 		R2Bucket:          os.Getenv("INVITE_R2_BUCKET"),
 		R2AccessKeyID:     os.Getenv("INVITE_R2_ACCESS_KEY_ID"),

@@ -9,31 +9,31 @@
   :root {
     --bg: #14161a;
     --panel: #1e2128;
-    --panel-2: #262a33;
+    --panel2: #262a33;
     --text: #e8eaed;
     --muted: #a7adba;
     --accent: #5db462;
-    --accent-2: #7fd884;
+    --accent2: #7fd884;
     --border: #333844;
     --warn-bg: #3a2c14;
     --warn-border: #7a5a1e;
     --warn-text: #f4d58b;
-    --code-bg: #0f1115;
+    --code: #0f1115;
   }
   @media (prefers-color-scheme: light) {
     :root {
       --bg: #f4f6f8;
       --panel: #ffffff;
-      --panel-2: #eef1f5;
+      --panel2: #eef1f5;
       --text: #1b1e24;
       --muted: #566072;
       --accent: #2f8f43;
-      --accent-2: #257035;
+      --accent2: #257035;
       --border: #d7dde5;
       --warn-bg: #fff5db;
       --warn-border: #e2b657;
       --warn-text: #6b4e12;
-      --code-bg: #eef1f5;
+      --code: #eef1f5;
     }
   }
   * { box-sizing: border-box; }
@@ -59,7 +59,7 @@
   .connect { text-align: center; }
   .addr {
     display: inline-flex; align-items: center; gap: 0.6rem;
-    background: var(--code-bg); border: 1px solid var(--border);
+    background: var(--code); border: 1px solid var(--border);
     border-radius: 10px; padding: 0.7rem 0.95rem; margin: 0.4rem 0;
     font-size: 1.35rem; font-weight: 600;
   }
@@ -69,9 +69,9 @@
     background: var(--accent); color: #06210b; border: 0;
     border-radius: 7px; padding: 0.35rem 0.6rem;
   }
-  .copy:hover { background: var(--accent-2); }
+  .copy:hover { background: var(--accent2); }
   .fallback { color: var(--muted); font-size: 0.95rem; margin-top: 0.4rem; }
-  .fallback code { background: var(--code-bg); padding: 0.1rem 0.35rem; border-radius: 5px; }
+  .fallback code { background: var(--code); padding: 0.1rem 0.35rem; border-radius: 5px; }
   .badge {
     display: inline-block; background: var(--accent); color: #06210b;
     font-weight: 700; border-radius: 999px; padding: 0.25rem 0.8rem; font-size: 0.95rem;
@@ -80,7 +80,7 @@
   .btn {
     display: inline-block; text-decoration: none; font-weight: 600;
     border-radius: 9px; padding: 0.7rem 1.1rem; border: 1px solid var(--border);
-    color: var(--text); background: var(--panel-2);
+    color: var(--text); background: var(--panel2);
   }
   .btn.primary { background: var(--accent); color: #06210b; border-color: transparent; }
   .btn:hover { filter: brightness(1.08); }
@@ -107,16 +107,16 @@
   ul.rules { padding-left: 1.2rem; }
   ul.rules li { margin: 0.35rem 0; }
   code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-  .em { color: var(--accent-2); font-weight: 600; }
+  .em { color: var(--accent2); font-weight: 600; }
   footer { text-align: center; color: var(--muted); font-size: 0.9rem; margin-top: 3rem; }
   footer a { color: var(--muted); }
-  a { color: var(--accent-2); }
+  a { color: var(--accent2); }
   .topnav { display: flex; gap: 1.1rem; flex-wrap: wrap; padding: 0.2rem 0 1.4rem; }
   .topnav a { color: var(--muted); text-decoration: none; font-weight: 600; }
   .topnav a:hover { color: var(--text); }
-  .topnav a.signedin { color: var(--accent-2); }
+  .topnav a.signedin { color: var(--accent2); }
   .statusbar { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
-    background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px;
+    background: var(--panel2); border: 1px solid var(--border); border-radius: 10px;
     padding: 0.6rem 0.9rem; margin: 1rem 0 0; font-size: 0.95rem; }
   .dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--accent); display: inline-block; }
   .dot.off { background: var(--muted); }
@@ -128,9 +128,8 @@
 </style>
 </head>
 <body>
+{{template "topnav" .}}
 <div class="wrap">
-
-  {{template "topnav" .}}
 
   <header>
     <div class="badge">Now running pack version {{.PackVersion}}</div>
