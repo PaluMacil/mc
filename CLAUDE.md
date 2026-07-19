@@ -143,8 +143,12 @@ server; gate those on an empty server.
 ## The two web apps
 
 - `web/` (`mc-web`) is stdlib-only by design; keep it dependency-free.
-  The pack version is the `-pack-version` flag and the screenshot is
-  `web/assets/atm10-7-1.png`; both move with the server (upgrade runbook).
+  The pack version is the `-pack-version` flag; two screenshots document
+  installs, `web/assets/atm10-7-1.png` (CurseForge version tab, on
+  `/curseforge`) and `web/assets/neoforge.png` (NeoForge installer's Minecraft
+  `1.21.1` + NeoForge `21.1.234` pick, on `/vanilla`). Those two versions are
+  hardcoded in `vanilla.html.tmpl`; the pack version, both screenshots, and the
+  hardcoded MC/NeoForge versions all move with the server (upgrade runbook).
 - `invite/` (`mc-invite`) is Go + templ + HTMX. Commit the generated
   `*_templ.go` files (CI checks they are current). Run
   `templ generate` (v0.3.x) after editing `.templ`. Config uses the

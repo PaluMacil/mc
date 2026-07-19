@@ -46,6 +46,11 @@
     display: flex; align-items: center; justify-content: center;
   }
   ol.steps p { margin: 0.4rem 0; }
+  .note { background:var(--warn-bg); border:1px solid var(--warn-border); color:var(--warn-text);
+    border-radius:10px; padding:0.8rem 1rem; margin:0.6rem 0; }
+  .shot { margin:0.8rem 0 0.2rem; }
+  .shot img { max-width:100%; height:auto; border-radius:10px; border:1px solid var(--border); display:block; }
+  .shot figcaption { color:var(--muted); font-size:0.9rem; margin-top:0.4rem; }
   footer { text-align:center; color:var(--muted); font-size:0.9rem; margin-top:3rem; }
   footer a { color:var(--muted); }
 </style>
@@ -70,8 +75,20 @@
     </li>
 
     <li>
-      <h3>Install NeoForge 21.1.234</h3>
-      <p>Download the 21.1.234 installer from <code>neoforged.net</code>, run it, and choose
+      <h3>Download NeoForge 21.1.234 (for Minecraft 1.21.1)</h3>
+      <p>Open the NeoForge installer files at <code>neoforged.net</code>. It asks you to pick a
+      <span class="em">Minecraft version first</span> &mdash; choose <span class="em">1.21.1</span>, the
+      version this pack runs on. The NeoForge version is then <span class="em">21.1.234</span>.</p>
+      <div class="note">Do <span class="em">not</span> pick the newest Minecraft version (such as 26.2).
+      That gives a different, incompatible NeoForge (like 26.2.0.25-beta) and the pack will not load. It
+      must be Minecraft <span class="em">1.21.1</span> &rarr; NeoForge <span class="em">21.1.234</span>.</div>
+      <figure class="shot">
+        <img src="/assets/neoforge.png"
+             alt="The NeoForge installer files page with Minecraft Version set to 1.21.1 and the NeoForge Version 21.1.234.">
+        <figcaption>Pick Minecraft <span class="em">1.21.1</span> first; the NeoForge version is then
+        <span class="em">21.1.234</span>.</figcaption>
+      </figure>
+      <p>Download that installer, run it (it needs the Java 21 from step 1), and choose
       <span class="em">Install client</span>. This adds a <span class="em">NeoForge 21.1.234</span>
       version to the Minecraft launcher.</p>
     </li>
