@@ -1,81 +1,55 @@
 package views
 
-// Downloads shows the client-pack link(s) and a step-by-step guide for playing
-// with the official ("vanilla") Minecraft launcher. Any signed-in user (guests
-// included) can view it, so an invited friend can set up before being added.
+// Downloads lists the whole mc-mods bucket for any signed-in user: the client
+// pack (what a vanilla-launcher player wants) and the server files & mods
+// (listed for completeness, not needed to play). Behind login.
 templ Downloads(vm DownloadsVM) {
 	@Layout("Downloads", vm.Nav) {
 		<h1>Downloads</h1>
+		<div class="banner">
+			<strong>Using CurseForge? You do not need anything here.</strong> CurseForge installs the whole
+			modpack for you. These files are only for playing with the official ("vanilla") Minecraft launcher.
+		</div>
 		<p class="lead">
-			Grab the modpack and set it up with the official Minecraft launcher.
-			Use the pack at version { vm.PackVersion } so it matches the server.
+			New here? Follow the <a href={ templ.SafeURL(vm.CurseforgeURL) }>CurseForge install guide</a>
+			(easiest). Not using CurseForge? See the
+			<a href={ templ.SafeURL(vm.VanillaURL) }>vanilla launcher install guide</a>, then grab the client
+			pack below.
 		</p>
 		if !vm.Available {
 			<div class="notice err">Downloads are temporarily unavailable. Please check back shortly.</div>
-		} else {
-			for _, f := range vm.Files {
-				<div class="card">
-					<h2 style="margin-top:0;">{ f.Title }</h2>
-					<p>{ f.Desc }</p>
-					<a class="btn" href={ templ.SafeURL(f.URL) }>Download</a>
-				</div>
-			}
-			<p class="muted">
-				This is a large file (about 1.5&nbsp;GB). The button takes you straight to
-				our storage; if the link expires before the download starts, just click
-				Download again.
-			</p>
 		}
-		<h2>Set it up with the official Minecraft launcher</h2>
-		<div class="card">
-			<ol>
-				<li>
-					<strong>Install Java 21.</strong> The NeoForge installer needs it. Get
-					Temurin 21 from <code>adoptium.net</code>.
-				</li>
-				<li>
-					<strong>Install NeoForge { vm.NeoForge }.</strong> Download the
-					{ vm.NeoForge } installer from <code>neoforged.net</code>, run it, and
-					choose <em>Install client</em>. This adds a
-					<em>NeoForge { vm.NeoForge }</em> version to the Minecraft launcher.
-				</li>
-				<li>
-					<strong>Make a game folder.</strong> In the launcher, open
-					<em>Installations &rarr; New installation</em>, pick the version
-					<em>release { vm.NeoForge }</em> (NeoForge), and set the
-					<em>Game directory</em> to a new empty folder such as
-					<code>C:\ATM10</code>. Under <em>More options</em>, set the memory in the
-					JVM arguments to at least <code>-Xmx8G</code> (10G recommended; needs a PC
-					with about 16&nbsp;GB of RAM). Save.
-				</li>
-				<li>
-					<strong>Add the pack.</strong> Download the client pack above and extract
-					it into that folder, so you end up with <code>C:\ATM10\mods</code>,
-					<code>C:\ATM10\config</code>, and <code>C:\ATM10\kubejs</code>.
-				</li>
-				<li>
-					<strong>Launch.</strong> Start the <em>NeoForge { vm.NeoForge }</em>
-					installation. The first launch takes a few minutes while it loads the mods.
-				</li>
-			</ol>
-		</div>
-		<h2>Connect</h2>
-		<div class="card">
-			<p>In <em>Multiplayer &rarr; Add Server</em>, use this address:</p>
-			<div class="link">
-				<code>{ vm.ServerAddress }</code>
-				<button class="btn" type="button" onclick="mcCopy(this)">Copy</button>
-			</div>
-			if vm.FallbackAddr != "" {
-				<p class="muted" style="margin-top:0.8rem;">
-					If it will not connect, use the explicit address
-					<code>{ vm.FallbackAddr }</code> instead.
+		if vm.Available && len(vm.Client) > 0 {
+			<h2>Client pack</h2>
+			<div class="card">
+				<p class="muted" style="margin-top:0;">
+					The ready-to-play client for the vanilla launcher: all mods, the pack configs, and KubeJS
+					scripts in one zip. Extract it into your game folder (see the vanilla guide).
 				</p>
-			}
+				for _, f := range vm.Client {
+					<div class="dlrow">
+						<span class="dlname">{ f.Title }</span>
+						<span class="dlsize">{ f.Size }</span>
+						<a class="btn sm" href={ templ.SafeURL(f.URL) }>Download</a>
+					</div>
+				}
+			</div>
+		}
+		if vm.Available && len(vm.Server) > 0 {
+			<h2>Server files &amp; mods</h2>
 			<p class="muted">
-				The server is whitelist-only. Ask Dan to add you (or redeem an invite link)
-				before you connect.
+				You do not need these to play. They are the server pack and the server-only mods, listed for
+				completeness.
 			</p>
-		</div>
+			<div class="card">
+				for _, f := range vm.Server {
+					<div class="dlrow">
+						<span class="dlname">{ f.Title }</span>
+						<span class="dlsize">{ f.Size }</span>
+						<a class="btn sm" href={ templ.SafeURL(f.URL) }>Download</a>
+					</div>
+				}
+			</div>
+		}
 	}
 }

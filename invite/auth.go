@@ -181,8 +181,9 @@ func (a *Auth) Callback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// A human-readable name for "created by" and the audit log: full name, else
-	// username, else email, else the opaque subject as a last resort.
-	displayName := cmp.Or(claims.Name, claims.PreferredUsername, claims.Email, idToken.Subject)
+	// username, else email. Only a SHORTENED subject as a last resort, so a user
+	// whose token carries no name/email is never recorded as a raw 64-hex sub.
+	displayName := cmp.Or(claims.Name, claims.PreferredUsername, claims.Email, shortSubject(idToken.Subject))
 
 	// A user with no admin/inviter role is a guest: someone who self-registered
 	// (Authentik enrollment lands them in mc-guest) but has not been granted
@@ -246,6 +247,15 @@ func (a *Auth) currentUser(ctx context.Context) (User, bool) {
 // DisplayName is the user's name, falling back to email then subject.
 func (u User) DisplayName() string {
 	return cmp.Or(u.Name, u.Email, u.Subject)
+}
+
+// shortSubject renders an opaque OIDC subject compactly (e.g. "id:1646ac34…")
+// so it never appears as a full 64-hex string in the UI or the audit log.
+func shortSubject(sub string) string {
+	if len(sub) <= 12 {
+		return sub
+	}
+	return "id:" + sub[:8] + "…"
 }
 
 // requireAuth admits signed-in users, attaching the User to the context, and

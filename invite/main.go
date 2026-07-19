@@ -75,13 +75,15 @@ func run(log *slog.Logger) error {
 	// the presigner nil and let the page show as unavailable rather than blocking
 	// the rest of the portal from starting.
 	var presign presigner
+	var lister objectLister
 	if cfg.R2Endpoint != "" && cfg.R2Bucket != "" && cfg.R2AccessKeyID != "" && cfg.R2SecretAccessKey != "" {
-		presign = r2Presigner{
+		r2 := r2Presigner{
 			endpoint:  cfg.R2Endpoint,
 			bucket:    cfg.R2Bucket,
 			accessKey: cfg.R2AccessKeyID,
 			secretKey: cfg.R2SecretAccessKey,
 		}
+		presign, lister = r2, r2
 	} else {
 		log.Warn("R2 not configured; the downloads page will show as unavailable")
 	}
@@ -94,6 +96,7 @@ func run(log *slog.Logger) error {
 		mojang:   MojangResolver{},
 		rcon:     RCONClient{Addr: cfg.RCONAddr, Password: cfg.RCONPassword},
 		presign:  presign,
+		lister:   lister,
 		players:  &playersCache{ttl: 10 * time.Second},
 		limiter:  newIPLimiter(5, 30*time.Second),
 		loc:      loc,

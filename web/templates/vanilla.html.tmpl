@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vanilla launcher install</title>
+<meta name="description" content="Install All the Mods 10 with the official (vanilla) Minecraft launcher and NeoForge, for players who do not use the CurseForge app.">
+<style>
+  :root {
+    --bg:#14161a; --panel:#1e2128; --panel2:#262a33; --text:#e8eaed; --muted:#a7adba;
+    --accent:#5db462; --accent2:#7fd884; --border:#333844; --code:#0f1115;
+    --warn-bg:#3a2c14; --warn-border:#7a5a1e; --warn-text:#f4d58b;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg:#f4f6f8; --panel:#fff; --panel2:#eef1f5; --text:#1b1e24; --muted:#566072;
+      --accent:#2f8f43; --accent2:#257035; --border:#d7dde5; --code:#eef1f5;
+      --warn-bg:#fff5db; --warn-border:#e2b657; --warn-text:#6b4e12;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text);
+    font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
+  .wrap { max-width:760px; margin:0 auto; padding:2rem 1.1rem 4rem; }
+  a { color:var(--accent2); }
+  h1 { font-size:1.8rem; margin:0.3rem 0 0.4rem; }
+  h2 { font-size:1.3rem; margin:2.2rem 0 0.6rem; }
+  h3 { font-size:1.05rem; margin:0 0 0.3rem; }
+  p.lead { color:var(--muted); margin-top:0; }
+  code { font-family:ui-monospace,Menlo,Consolas,monospace; background:var(--code);
+    border:1px solid var(--border); border-radius:5px; padding:0.05rem 0.35rem; }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:1.1rem 1.3rem; margin:1.1rem 0; }
+  .muted { color:var(--muted); }
+  .em { color:var(--accent2); font-weight:600; }
+  ol.steps { counter-reset: step; list-style: none; padding: 0; margin: 0; }
+  ol.steps > li {
+    position: relative; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.1rem 1.2rem 1.1rem 3.4rem; margin: 0.9rem 0;
+  }
+  ol.steps > li::before {
+    counter-increment: step; content: counter(step);
+    position: absolute; left: 1rem; top: 1.05rem;
+    width: 1.7rem; height: 1.7rem; border-radius: 50%;
+    background: var(--accent); color: #06210b; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  ol.steps p { margin: 0.4rem 0; }
+  footer { text-align:center; color:var(--muted); font-size:0.9rem; margin-top:3rem; }
+  footer a { color:var(--muted); }
+</style>
+</head>
+<body>
+{{template "topnav" .}}
+<div class="wrap">
+
+  <h1>Install with the official (vanilla) launcher</h1>
+  <p class="lead">This path is for players who do <span class="em">not</span> use the CurseForge app. It
+  takes a little more setup, and you will need the client pack from the
+  <a href="/portal/downloads">Downloads page in the member portal</a>. Keep the pack at version
+  {{.PackVersion}} so it matches the server.</p>
+
+  <h2>Set it up with the official Minecraft launcher</h2>
+
+  <ol class="steps">
+
+    <li>
+      <h3>Install Java 21</h3>
+      <p>The NeoForge installer needs it. Get Temurin 21 from <code>adoptium.net</code>.</p>
+    </li>
+
+    <li>
+      <h3>Install NeoForge 21.1.234</h3>
+      <p>Download the 21.1.234 installer from <code>neoforged.net</code>, run it, and choose
+      <span class="em">Install client</span>. This adds a <span class="em">NeoForge 21.1.234</span>
+      version to the Minecraft launcher.</p>
+    </li>
+
+    <li>
+      <h3>Make a game folder</h3>
+      <p>In the launcher, open <span class="em">Installations &rarr; New installation</span>, pick the
+      version <span class="em">release 21.1.234</span> (NeoForge), and set the
+      <span class="em">Game directory</span> to a new empty folder such as <code>C:\ATM10</code>.
+      Under <span class="em">More options</span>, set the memory in the JVM arguments to at least
+      <code>-Xmx8G</code> (10G recommended; needs a PC with about 16&nbsp;GB of RAM). Save.</p>
+    </li>
+
+    <li>
+      <h3>Add the pack</h3>
+      <p>Download the client pack from the Downloads page in the member portal and extract it into that
+      folder, so you end up with <code>C:\ATM10\mods</code>, <code>C:\ATM10\config</code>, and
+      <code>C:\ATM10\kubejs</code>.</p>
+    </li>
+
+    <li>
+      <h3>Launch</h3>
+      <p>Start the <span class="em">NeoForge 21.1.234</span> installation. The first launch takes a few
+      minutes while it loads the mods.</p>
+    </li>
+
+  </ol>
+
+  <h2>Connect</h2>
+  <div class="card">
+    <p>In <span class="em">Multiplayer &rarr; Add Server</span>, use this address:</p>
+    <p><code>{{.ServerAddress}}</code></p>
+    <p>If it will not connect, use the explicit address <code>{{.FallbackAddress}}</code> instead.</p>
+    <p class="muted">The server is whitelist-only. Ask Dan to add you (or redeem an invite link)
+    before you connect.</p>
+  </div>
+
+  <footer>
+    <p><a href="/">Back to the main page</a> &middot; Prefer the CurseForge app? See the
+    <a href="/curseforge">CurseForge install</a>.</p>
+  </footer>
+
+</div>
+{{template "authscript" .}}
+</body>
+</html>

@@ -75,10 +75,11 @@ func TestNavAdminDropdown(t *testing.T) {
 	admin.SignedIn, admin.Name, admin.IsAdmin = true, "Palu", true
 	out := render(admin)
 	require.Contains(t, out, `class="usermenu"`)
+	require.Contains(t, out, "Danland") // brand
 	require.Contains(t, out, "Metrics dashboard")
 	require.Contains(t, out, "grafana.example/d/mc")
-	require.Contains(t, out, "Player tips") // public link kept when signed in
-	require.Contains(t, out, "Dashboard")   // member link in the bar
+	require.Contains(t, out, "ATM10")  // Tips dropdown item (public)
+	require.Contains(t, out, "Invite") // member link (renamed from Dashboard)
 	require.Contains(t, out, "Downloads")
 
 	guest := base
@@ -94,20 +95,44 @@ func TestNavAdminDropdown(t *testing.T) {
 
 func TestDownloadsPageRenders(t *testing.T) {
 	vm := views.DownloadsVM{
-		Nav:           views.NavVM{SignedIn: true, DownloadsURL: "/invite/downloads"},
+		Nav:           views.NavVM{SignedIn: true},
 		Available:     true,
-		ServerAddress: "mc.danwolf.net",
-		FallbackAddr:  "game.danwolf.net:25999",
-		NeoForge:      "21.1.234",
-		PackVersion:   "7.1",
-		Files: []views.DownloadFileVM{
-			{Title: "ATM10 client pack (7.1)", Desc: "desc", URL: "/invite/downloads/client"},
+		CurseforgeURL: "/curseforge",
+		VanillaURL:    "/vanilla",
+		Client: []views.DownloadFileVM{
+			{Title: "atm10-7.1-client.zip", Size: "1.5 GB", URL: "/invite/downloads/get?o=atm10-7.1-client.zip"},
+		},
+		Server: []views.DownloadFileVM{
+			{Title: "ServerFiles-7.1.zip", Size: "1.1 GB", URL: "/invite/downloads/get?o=ServerFiles-7.1.zip"},
 		},
 	}
 	var buf bytes.Buffer
 	require.NoError(t, views.Downloads(vm).Render(context.Background(), &buf))
 	body := buf.String()
-	require.Contains(t, body, "/invite/downloads/client")
-	require.Contains(t, body, "21.1.234")
-	require.Contains(t, body, "mc.danwolf.net")
+	require.Contains(t, body, "atm10-7.1-client.zip")     // client pack row
+	require.Contains(t, body, "Server files")             // server section header
+	require.Contains(t, body, "CurseForge install guide") // intro link
+	require.Contains(t, body, "downloads/get?o=")         // presign endpoint
+	require.Contains(t, body, "1.5 GB")                   // size
+}
+
+func TestHumanWho(t *testing.T) {
+	require.Equal(t, "dcwolf@gmail.com", humanWho("dcwolf@gmail.com"))
+	require.Equal(t, "Dan Wolf", humanWho("Dan Wolf"))
+	require.Equal(t, "Palu_Macil", humanWho("Palu_Macil"))
+	require.Equal(t, "unknown", humanWho(""))
+	require.Equal(t, "id:1646ac34…",
+		humanWho("1646ac34d5c11fe678b5a7e34418aa57cf3a882ceccb5ba59f5d9f6be1b75fd1"))
+}
+
+func TestShortSubject(t *testing.T) {
+	require.Equal(t, "short", shortSubject("short"))
+	require.Equal(t, "id:1646ac34…",
+		shortSubject("1646ac34d5c11fe678b5a7e34418aa57cf3a882ceccb5ba59f5d9f6be1b75fd1"))
+}
+
+func TestHumanBytes(t *testing.T) {
+	require.Equal(t, "512 B", humanBytes(512))
+	require.Equal(t, "1.0 KB", humanBytes(1024))
+	require.Equal(t, "1.5 GB", humanBytes(1610612736))
 }

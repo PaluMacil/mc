@@ -11,9 +11,12 @@ type NavVM struct {
 	DownloadsURL string // client pack + setup guide (member link)
 	LandingURL   string // main site landing page (the brand + "Home")
 	MapURL       string // live world map
-	TipsURL      string // player tips page (on the landing site)
-	ParentsURL   string // parent tips page (on the landing site)
-	MetricsURL   string // Grafana dashboard, shown in the admin dropdown only
+	TipsURL       string // ATM10 tips page (on the landing site)
+	ParentsURL    string // parent tips page (on the landing site)
+	RulesURL      string // house rules page (on the landing site)
+	CurseforgeURL string // CurseForge install guide (on the landing site)
+	VanillaURL    string // vanilla-launcher install guide (on the landing site)
+	MetricsURL    string // Grafana dashboard, shown in the admin dropdown only
 	LoginURL     string
 	LogoutURL    string
 	HtmxSrc      string
@@ -92,23 +95,23 @@ type RedeemDoneVM struct {
 	ServerAddress string
 }
 
-// DownloadsVM drives the authenticated downloads page: the client-pack links
-// and the vanilla-launcher setup guide.
+// DownloadsVM drives the authenticated downloads page: the whole mc-mods bucket,
+// split into the client pack (what a vanilla-launcher player wants) and the
+// server files/mods (listed for completeness, not needed to play).
 type DownloadsVM struct {
 	Nav           NavVM
-	Available     bool             // false when R2 is not configured; hides the links
-	Files         []DownloadFileVM // things to download (currently the client pack)
-	ServerAddress string           // primary connect address
-	FallbackAddr  string           // explicit host:port fallback
-	MapURL        string
-	NeoForge      string // required NeoForge version, e.g. 21.1.234
-	PackVersion   string // pack version the server runs, e.g. 7.1
+	Available     bool             // false when R2 is unavailable; hides the links
+	Client        []DownloadFileVM // the client pack(s) most people want
+	Server        []DownloadFileVM // server files & mods; not needed to play
+	CurseforgeURL string           // link to the CurseForge install guide
+	VanillaURL    string           // link to the vanilla-launcher install guide
 }
 
-// DownloadFileVM is one downloadable file. URL is a GET endpoint on this app
+// DownloadFileVM is one downloadable object. URL is a GET endpoint on this app
 // that 302-redirects to a short-lived presigned R2 URL.
 type DownloadFileVM struct {
 	Title string
 	Desc  string
+	Size  string // human-readable, e.g. "1.5 GB"
 	URL   string
 }

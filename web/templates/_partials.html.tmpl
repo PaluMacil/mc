@@ -1,21 +1,23 @@
 {{/*
-Shared header for the static public pages so the bar, sign-in state, and the
-member dropdown stay identical to the portal (mc-invite). This file defines only
-named templates; it is never rendered on its own. "topnav" carries its own
-<style> (the color tokens come from each page's :root) and is placed as a direct
-body child, so the bar is full width like the portal's. "authscript" reveals the
-member links and swaps "Sign in" for the user dropdown once the portal reports
-the visitor is signed in (admins also get the metrics link). A <div>, not a
-<header>, so the pages' own header{} hero rule does not style the bar.
+Shared header for the static public pages so the bar, the Tips dropdown, the
+sign-in state, and the member dropdown stay identical to the portal (mc-invite).
+This file defines only named templates; it is never rendered on its own.
+"topnav" carries its own <style> (tokens come from each page's :root) and is a
+direct body child, so the bar is full width like the portal's. "authscript"
+reveals the member links and swaps "Sign in" for the user dropdown once the
+portal reports the visitor is signed in (admins also get the metrics link). A
+<div>, not a <header>, so the pages' own header{} hero rule does not style it.
 */}}
 {{define "topnav" -}}
 <style>
   .topbar { display:flex; align-items:center; flex-wrap:wrap; gap:0.6rem 1.1rem;
     padding:0.8rem 1.1rem; border-bottom:1px solid var(--border); background:var(--panel); }
   .topbar .brand { font-weight:700; text-decoration:none; color:var(--text); }
-  .topbar .mainnav { display:flex; gap:1rem; flex-wrap:wrap; }
+  .topbar .mainnav { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
   .topbar .mainnav a { color:var(--muted); text-decoration:none; font-weight:600; }
   .topbar .mainnav a:hover { color:var(--text); }
+  .topbar .mainnav a.ext { display:inline-flex; align-items:center; gap:0.25rem; }
+  .topbar .exticon { width:0.8em; height:0.8em; opacity:0.7; }
   .topbar .authnav { display:flex; align-items:center; gap:0.7rem; margin-left:auto; }
   .topbar .who { color:var(--text); font-size:0.9rem; }
   .topbar .pill { background:var(--panel2); border:1px solid var(--border); color:var(--muted);
@@ -23,29 +25,42 @@ the visitor is signed in (admins also get the metrics link). A <div>, not a
   .topbar .pill.admin { background:var(--accent); color:#06210b; border-color:transparent; font-weight:700; }
   .topbar .linkbtn { font:inherit; font-size:0.9rem; background:none; border:0; color:var(--accent2);
     cursor:pointer; padding:0; text-decoration:underline; }
-  .usermenu { position:relative; }
-  .usermenu > summary { list-style:none; cursor:pointer; display:flex; align-items:center; gap:0.4rem;
-    padding:0.25rem 0.5rem; border:1px solid var(--border); border-radius:8px; background:var(--panel2); }
-  .usermenu > summary::-webkit-details-marker { display:none; }
+  /* Dropdowns (no JS): a <details>. .navdrop = nav-link summary; .usermenu = pill summary. */
+  .navdrop, .usermenu { position:relative; }
+  .navdrop > summary, .usermenu > summary { list-style:none; cursor:pointer; }
+  .navdrop > summary::-webkit-details-marker, .usermenu > summary::-webkit-details-marker { display:none; }
+  .navdrop > summary { display:inline-flex; align-items:center; gap:0.3rem; color:var(--muted); font-weight:600; }
+  .navdrop > summary:hover, .navdrop[open] > summary { color:var(--text); }
+  .usermenu > summary { display:flex; align-items:center; gap:0.4rem; padding:0.25rem 0.5rem;
+    border:1px solid var(--border); border-radius:8px; background:var(--panel2); }
   .usermenu > summary:hover, .usermenu[open] > summary { border-color:var(--muted); }
-  .usermenu .caret { color:var(--muted); font-size:0.75rem; }
-  .usermenu .menu { position:absolute; right:0; top:calc(100% + 0.35rem); min-width:12rem;
-    background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:0.35rem;
-    display:flex; flex-direction:column; gap:0.1rem; box-shadow:0 8px 24px rgba(0,0,0,0.35); z-index:20; }
-  .usermenu .menu form { margin:0; }
-  .usermenu .menu a, .usermenu .menu .menuitem { display:block; width:100%; text-align:left; font:inherit;
-    font-size:0.92rem; color:var(--text); text-decoration:none; background:none; border:0; cursor:pointer;
+  .caret { color:var(--muted); font-size:0.75rem; }
+  .menu { position:absolute; top:calc(100% + 0.35rem); min-width:13rem; background:var(--panel);
+    border:1px solid var(--border); border-radius:10px; padding:0.35rem; display:flex;
+    flex-direction:column; gap:0.1rem; box-shadow:0 8px 24px rgba(0,0,0,0.35); z-index:20; }
+  .navdrop .menu { left:0; }
+  .usermenu .menu { right:0; }
+  .menu form { margin:0; }
+  .menu a, .menu .menuitem { display:block; width:100%; text-align:left; font:inherit; font-size:0.92rem;
+    color:var(--text); text-decoration:none; font-weight:500; background:none; border:0; cursor:pointer;
     padding:0.45rem 0.6rem; border-radius:7px; }
-  .usermenu .menu a:hover, .usermenu .menu .menuitem:hover { background:var(--panel2); }
+  .menu a:hover, .menu .menuitem:hover { background:var(--panel2); color:var(--text); }
 </style>
 <div class="topbar">
-  <a class="brand" href="/">All the Mods 10</a>
+  <a class="brand" href="/">Danland</a>
   <nav class="mainnav">
-    <a href="/">Home</a>
-    <a href="{{.MapPath}}">Live map</a>
-    <a href="{{.TipsPath}}">Player tips</a>
-    <a href="{{.ParentsPath}}">Parent tips</a>
-    <a class="member" href="{{.PortalPath}}" hidden>Dashboard</a>
+    <a class="ext" href="{{.MapPath}}" target="_blank" rel="noopener">Map<svg class="exticon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path></svg></a>
+    <details class="navdrop">
+      <summary>Tips <span class="caret" aria-hidden="true">&#9662;</span></summary>
+      <div class="menu">
+        <a href="{{.TipsPath}}">ATM10</a>
+        <a href="{{.ParentsPath}}">Parents</a>
+        <a href="{{.RulesPath}}">Rules</a>
+        <a href="{{.CurseforgePath}}">CurseForge Install</a>
+        <a href="{{.VanillaPath}}">Vanilla Launcher Install</a>
+      </div>
+    </details>
+    <a class="member" href="{{.PortalPath}}" hidden>Invite</a>
     <a class="member" href="{{.PortalPath}}downloads" hidden>Downloads</a>
   </nav>
   <div class="authnav">

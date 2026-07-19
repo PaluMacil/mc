@@ -49,6 +49,7 @@
   h2 { font-size: 1.35rem; margin: 2.4rem 0 0.8rem; }
   h3 { font-size: 1.05rem; margin: 0 0 0.3rem; }
   .tagline { color: var(--muted); margin: 0.2rem 0 0; }
+  .guidelinks { text-align: center; color: var(--muted); margin: 1.6rem 0 0; }
   .card {
     background: var(--panel);
     border: 1px solid var(--border);
@@ -132,8 +133,7 @@
 <div class="wrap">
 
   <header>
-    <div class="badge">Now running pack version {{.PackVersion}}</div>
-    <h1>All the Mods 10</h1>
+    <div class="badge">All the Mods 10 (version {{.PackVersion}})</div>
     <p class="tagline">A small, whitelist-only Minecraft server for friends and their kids.</p>
   </header>
 
@@ -146,86 +146,17 @@
     <p class="fallback">If your launcher will not connect, use the explicit address <code>{{.FallbackAddress}}</code> instead.</p>
     <div class="btns">
       <a class="btn primary" href="{{.MapPath}}">Open the live map</a>
-      <a class="btn" href="#setup">How do I get on?</a>
+      <a class="btn" href="{{.CurseforgePath}}">How do I get on?</a>
     </div>
     <div id="players" class="statusbar"><span class="pnames">Checking who is online&hellip;</span></div>
     <p class="fallback">The server is whitelist only. You have to be added before you can join; ask Dan.</p>
   </section>
 
-  <h2 id="setup">Setting up: a guide for players and parents</h2>
-  <p>This takes about fifteen minutes. The single most common problem is running the
-  <span class="em">wrong version</span> of the modpack, so please read step 3 carefully. If a
-  connection fails with a confusing message about mods, the answer is almost always
-  "match the server's version," never a setting to change.</p>
-
-  <ol class="steps">
-
-    <li>
-      <h3>Install Minecraft: Java Edition</h3>
-      <p>Buy and install <span class="em">Minecraft: Java Edition</span> using a Microsoft account.
-      Bedrock Edition (the version on consoles, phones, and the Windows Store) is a different game
-      and cannot join this server.</p>
-      <p>During setup you pick a <span class="em">Java profile name</span>. That name, not your Xbox
-      gamertag, is what gets added to the whitelist. Write it down exactly (capital letters and
-      underscores matter) and send it to Dan.</p>
-    </li>
-
-    <li>
-      <h3>Install the CurseForge app</h3>
-      <p>Download and install the free <span class="em">CurseForge</span> app. It manages modpacks
-      and keeps them separate from your normal Minecraft.</p>
-    </li>
-
-    <li>
-      <h3>Install All the Mods 10, version {{.PackVersion}}</h3>
-      <p>In CurseForge, search for <span class="em">All the Mods 10</span> and open it. Do
-      <span class="em">not</span> click the big blue Install button: it always installs the newest
-      version, which will not match the server and will fail to connect.</p>
-      <p>Instead open the <span class="em">Versions</span> tab, find
-      <span class="em">All the Mods 10-{{.PackVersion}}</span> in the list, and install that exact one.</p>
-      <figure class="shot">
-        <img src="/assets/atm10-7-1.png"
-             alt="The CurseForge app on the All the Mods 10 Versions tab, installing version {{.PackVersion}} from the version list rather than the default Install button.">
-        <figcaption>The Versions tab. Install version {{.PackVersion}} from this list, not the default Install button.</figcaption>
-      </figure>
-      <div class="note">Later, CurseForge will offer to update the pack. Do not accept those updates
-      until the server announces a version change. Everyone has to move at the same time, or the
-      updated players can no longer connect.</div>
-    </li>
-
-    <li>
-      <h3>Give it enough memory</h3>
-      <p>Modpacks need a lot of memory. In CurseForge settings, raise the allocated memory to about
-      <span class="em">8 GB</span> on a computer with 16 GB of RAM, or about <span class="em">5 GB</span>
-      on a computer with 8 GB. Too little memory is the usual cause of freezes and crashes.</p>
-    </li>
-
-    <li>
-      <h3>Add the server and join</h3>
-      <p>Launch All the Mods 10 from CurseForge. On the Minecraft title screen choose
-      <span class="em">Multiplayer</span>, then <span class="em">Add Server</span>, and enter the
-      address:</p>
-      <p><code>{{.ServerAddress}}</code></p>
-      <p>If your launcher refuses to connect, edit the server and use <code>{{.FallbackAddress}}</code> instead.</p>
-      <p>Make sure Dan has already added your Java profile name to the whitelist; until then the
-      server will turn you away.</p>
-    </li>
-
-  </ol>
-
-  <h2>House rules</h2>
-  <section class="card">
-    <ul class="rules">
-      <li>Be kind. This is a small server for friends; treat people the way you want to be treated.</li>
-      <li>No griefing or stealing. Do not break, take, or change other people's builds and chests.
-      The server keeps a log of who changed which blocks, so this is easy to check.</li>
-      <li>Ask before building right next to someone or borrowing their things.</li>
-      <li>No cheats or hacked clients. Play the pack as it comes.</li>
-      <li>Run pack version {{.PackVersion}}, the same as everyone else, and only update when the
-      server says to.</li>
-      <li>Have fun and build something cool.</li>
-    </ul>
-  </section>
+  <p class="guidelinks">
+    New here? Read the <a href="{{.CurseforgePath}}">CurseForge install guide</a> (easiest), the
+    <a href="{{.VanillaPath}}">vanilla launcher guide</a>, the <a href="{{.TipsPath}}">ATM10 tips</a>,
+    and the <a href="{{.RulesPath}}">house rules</a>.
+  </p>
 
   <footer>
     <p>Inviting a friend, or new here? <a href="{{.PortalPath}}">Sign in to the member portal</a>.</p>

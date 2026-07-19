@@ -39,6 +39,9 @@ type pageData struct {
 	PortalPath      string
 	ParentsPath     string
 	TipsPath        string
+	RulesPath       string
+	CurseforgePath  string
+	VanillaPath     string
 	PlayersURL      string
 	WhoamiURL       string
 	MetricsURL      string
@@ -53,7 +56,10 @@ func main() {
 	mapPath := flag.String("map-path", "/map/", "path the live BlueMap is served under (trailing slash matters)")
 	portalPath := flag.String("portal-path", "/portal/", "path the member portal (sign in, invites) is served under")
 	parentsPath := flag.String("parents-path", "/parents", "path of the parental-controls tips page")
-	tipsPath := flag.String("tips-path", "/tips", "path of the player tips page")
+	tipsPath := flag.String("tips-path", "/tips", "path of the ATM10 player tips page")
+	rulesPath := flag.String("rules-path", "/rules", "path of the house rules page")
+	curseforgePath := flag.String("curseforge-path", "/curseforge", "path of the CurseForge install guide")
+	vanillaPath := flag.String("vanilla-path", "/vanilla", "path of the vanilla-launcher install guide")
 	playersURL := flag.String("players-url", "/portal/players", "same-origin endpoint returning the online-players fragment")
 	whoamiURL := flag.String("whoami-url", "/portal/whoami", "same-origin endpoint reporting the visitor's sign-in state")
 	metricsURL := flag.String("metrics-url", "https://grafana.danwolf.net/d/mc-atm10", "Grafana dashboard, shown in the admin user-menu (tailnet-only)")
@@ -67,6 +73,9 @@ func main() {
 		PortalPath:      *portalPath,
 		ParentsPath:     *parentsPath,
 		TipsPath:        *tipsPath,
+		RulesPath:       *rulesPath,
+		CurseforgePath:  *curseforgePath,
+		VanillaPath:     *vanillaPath,
 		PlayersURL:      *playersURL,
 		WhoamiURL:       *whoamiURL,
 		MetricsURL:      *metricsURL,
@@ -77,6 +86,9 @@ func main() {
 	index := renderPage(tmpl, "index.html.tmpl", data)
 	parents := renderPage(tmpl, "parents.html.tmpl", data)
 	tips := renderPage(tmpl, "tips.html.tmpl", data)
+	rules := renderPage(tmpl, "rules.html.tmpl", data)
+	curseforge := renderPage(tmpl, "curseforge.html.tmpl", data)
+	vanilla := renderPage(tmpl, "vanilla.html.tmpl", data)
 
 	mux := http.NewServeMux()
 
@@ -90,6 +102,9 @@ func main() {
 
 	mux.HandleFunc(strings.TrimRight(*parentsPath, "/"), servePage(parents))
 	mux.HandleFunc(strings.TrimRight(*tipsPath, "/"), servePage(tips))
+	mux.HandleFunc(strings.TrimRight(*rulesPath, "/"), servePage(rules))
+	mux.HandleFunc(strings.TrimRight(*curseforgePath, "/"), servePage(curseforge))
+	mux.HandleFunc(strings.TrimRight(*vanillaPath, "/"), servePage(vanilla))
 
 	// Landing page. Only the exact root renders it; anything else under
 	// mc-web's / route that is not a more specific match is a genuine 404.

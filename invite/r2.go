@@ -1,11 +1,15 @@
 package main
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/xml"
 	"fmt"
+	"io"
 	"maps"
+	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
@@ -177,4 +181,67 @@ func awsURIEncode(s string, encodeSlash bool) string {
 		}
 	}
 	return b.String()
+}
+
+// r2Object is one object in the bucket listing.
+type r2Object struct {
+	Key  string
+	Size int64
+}
+
+// objectLister lists the objects in the bucket. Kept separate from presigner so
+// the download handlers can be exercised with a stub in tests.
+type objectLister interface {
+	listObjects(ctx context.Context) ([]r2Object, error)
+}
+
+// listObjects fetches the bucket contents via a presigned S3 ListObjectsV2 GET
+// (reusing the SigV4 query signer) and parses the XML. Read-only R2 credentials
+// suffice; an "Object Read" token includes ListBucket.
+func (p r2Presigner) listObjects(ctx context.Context) ([]r2Object, error) {
+	u, err := url.Parse(p.endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("parsing R2 endpoint %q: %w", p.endpoint, err)
+	}
+	canonicalURI := "/" + awsURIEncode(p.bucket, false)
+	sig, query := presignQueryV4(presignInput{
+		host:         u.Host,
+		canonicalURI: canonicalURI,
+		accessKey:    p.accessKey,
+		secretKey:    p.secretKey,
+		region:       sigV4Region,
+		service:      sigV4Service,
+		expires:      5 * time.Minute,
+		now:          time.Now().UTC(),
+		extra:        map[string]string{"list-type": "2"},
+	})
+	reqURL := u.Scheme + "://" + u.Host + canonicalURI + "?" + query + "&X-Amz-Signature=" + sig
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("listing R2 bucket: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
+		return nil, fmt.Errorf("R2 list %s: %s", resp.Status, strings.TrimSpace(string(body)))
+	}
+	var lr struct {
+		Contents []struct {
+			Key  string `xml:"Key"`
+			Size int64  `xml:"Size"`
+		} `xml:"Contents"`
+	}
+	if err := xml.NewDecoder(resp.Body).Decode(&lr); err != nil {
+		return nil, fmt.Errorf("parsing R2 listing: %w", err)
+	}
+	objs := make([]r2Object, 0, len(lr.Contents))
+	for _, c := range lr.Contents {
+		objs = append(objs, r2Object{Key: c.Key, Size: c.Size})
+	}
+	return objs, nil
 }

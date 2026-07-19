@@ -37,7 +37,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: mc-invite
-          image: ghcr.io/palumacil/mc-invite:v0.7.0
+          image: ghcr.io/palumacil/mc-invite:v0.8.0
           env:
             - name: INVITE_LISTEN_ADDR
               value: ":8080"

@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CurseForge install</title>
+<meta name="description" content="Step-by-step guide to installing All the Mods 10 with the CurseForge app and joining our server, written for players and their parents.">
+<style>
+  :root {
+    --bg:#14161a; --panel:#1e2128; --panel2:#262a33; --text:#e8eaed; --muted:#a7adba;
+    --accent:#5db462; --accent2:#7fd884; --border:#333844; --code:#0f1115;
+    --warn-bg:#3a2c14; --warn-border:#7a5a1e; --warn-text:#f4d58b;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg:#f4f6f8; --panel:#fff; --panel2:#eef1f5; --text:#1b1e24; --muted:#566072;
+      --accent:#2f8f43; --accent2:#257035; --border:#d7dde5; --code:#eef1f5;
+      --warn-bg:#fff5db; --warn-border:#e2b657; --warn-text:#6b4e12;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text);
+    font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
+  .wrap { max-width:760px; margin:0 auto; padding:2rem 1.1rem 4rem; }
+  a { color:var(--accent2); }
+  h1 { font-size:1.8rem; margin:0.3rem 0 0.4rem; }
+  h2 { font-size:1.3rem; margin:2.2rem 0 0.6rem; }
+  h3 { font-size:1.05rem; margin:0 0 0.3rem; }
+  p.lead { color:var(--muted); margin-top:0; }
+  code { font-family:ui-monospace,Menlo,Consolas,monospace; background:var(--code);
+    border:1px solid var(--border); border-radius:5px; padding:0.05rem 0.35rem; }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:1.1rem 1.3rem; margin:1.1rem 0; }
+  .badge {
+    display: inline-block; background: var(--accent); color: #06210b;
+    font-weight: 700; border-radius: 999px; padding: 0.25rem 0.8rem; font-size: 0.95rem;
+  }
+  .em { color:var(--accent2); font-weight:600; }
+  .note {
+    background: var(--warn-bg); border: 1px solid var(--warn-border);
+    color: var(--warn-text); border-radius: 10px; padding: 0.8rem 1rem; margin: 1rem 0;
+  }
+  ol.steps { counter-reset: step; list-style: none; padding: 0; margin: 0; }
+  ol.steps > li {
+    position: relative; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.1rem 1.2rem 1.1rem 3.4rem; margin: 0.9rem 0;
+  }
+  ol.steps > li::before {
+    counter-increment: step; content: counter(step);
+    position: absolute; left: 1rem; top: 1.05rem;
+    width: 1.7rem; height: 1.7rem; border-radius: 50%;
+    background: var(--accent); color: #06210b; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  ol.steps p { margin: 0.4rem 0; }
+  .shot { margin: 0.8rem 0 0.2rem; }
+  .shot img { max-width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--border); display: block; }
+  .shot figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 0.4rem; }
+  footer { text-align:center; color:var(--muted); font-size:0.9rem; margin-top:3rem; }
+  footer a { color:var(--muted); }
+</style>
+</head>
+<body>
+{{template "topnav" .}}
+<div class="wrap">
+
+  <h1>Install with CurseForge</h1>
+  <p class="lead">The easiest way onto the server: the free CurseForge app handles the modpack for you.</p>
+
+  <h2 id="setup">Setting up: a guide for players and parents</h2>
+  <p>This takes about fifteen minutes. The single most common problem is running the
+  <span class="em">wrong version</span> of the modpack, so please read step 3 carefully. If a
+  connection fails with a confusing message about mods, the answer is almost always
+  "match the server's version," never a setting to change.</p>
+
+  <ol class="steps">
+
+    <li>
+      <h3>Install Minecraft: Java Edition</h3>
+      <p>Buy and install <span class="em">Minecraft: Java Edition</span> using a Microsoft account.
+      Bedrock Edition (the version on consoles, phones, and the Windows Store) is a different game
+      and cannot join this server.</p>
+      <p>During setup you pick a <span class="em">Java profile name</span>. That name, not your Xbox
+      gamertag, is what gets added to the whitelist. Write it down exactly (capital letters and
+      underscores matter) and send it to Dan.</p>
+    </li>
+
+    <li>
+      <h3>Install the CurseForge app</h3>
+      <p>Download and install the free <span class="em">CurseForge</span> app. It manages modpacks
+      and keeps them separate from your normal Minecraft.</p>
+    </li>
+
+    <li>
+      <h3>Install All the Mods 10, version {{.PackVersion}}</h3>
+      <p>In CurseForge, search for <span class="em">All the Mods 10</span> and open it. Do
+      <span class="em">not</span> click the big blue Install button: it always installs the newest
+      version, which will not match the server and will fail to connect.</p>
+      <p>Instead open the <span class="em">Versions</span> tab, find
+      <span class="em">All the Mods 10-{{.PackVersion}}</span> in the list, and install that exact one.</p>
+      <figure class="shot">
+        <img src="/assets/atm10-7-1.png"
+             alt="The CurseForge app on the All the Mods 10 Versions tab, installing version {{.PackVersion}} from the version list rather than the default Install button.">
+        <figcaption>The Versions tab. Install version {{.PackVersion}} from this list, not the default Install button.</figcaption>
+      </figure>
+      <div class="note">Later, CurseForge will offer to update the pack. Do not accept those updates
+      until the server announces a version change. Everyone has to move at the same time, or the
+      updated players can no longer connect.</div>
+    </li>
+
+    <li>
+      <h3>Give it enough memory</h3>
+      <p>Modpacks need a lot of memory. In CurseForge settings, raise the allocated memory to about
+      <span class="em">8 GB</span> on a computer with 16 GB of RAM, or about <span class="em">5 GB</span>
+      on a computer with 8 GB. Too little memory is the usual cause of freezes and crashes.</p>
+    </li>
+
+    <li>
+      <h3>Add the server and join</h3>
+      <p>Launch All the Mods 10 from CurseForge. On the Minecraft title screen choose
+      <span class="em">Multiplayer</span>, then <span class="em">Add Server</span>, and enter the
+      address:</p>
+      <p><code>{{.ServerAddress}}</code></p>
+      <p>If your launcher refuses to connect, edit the server and use <code>{{.FallbackAddress}}</code> instead.</p>
+      <p>Make sure Dan has already added your Java profile name to the whitelist; until then the
+      server will turn you away.</p>
+    </li>
+
+  </ol>
+
+  <footer>
+    <p><a href="/">Back to the main page</a> &middot; Not using CurseForge? See the
+    <a href="/vanilla">vanilla launcher install</a>.</p>
+  </footer>
+
+</div>
+{{template "authscript" .}}
+</body>
+</html>

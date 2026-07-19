@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>House rules</title>
+<meta name="description" content="The house rules for our small, whitelist-only All the Mods 10 Minecraft server: be kind, no griefing, no cheats, and match the server's pack version.">
+<style>
+  :root {
+    --bg:#14161a; --panel:#1e2128; --panel2:#262a33; --text:#e8eaed; --muted:#a7adba;
+    --accent:#5db462; --accent2:#7fd884; --border:#333844; --code:#0f1115;
+    --warn-bg:#3a2c14; --warn-border:#7a5a1e; --warn-text:#f4d58b;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg:#f4f6f8; --panel:#fff; --panel2:#eef1f5; --text:#1b1e24; --muted:#566072;
+      --accent:#2f8f43; --accent2:#257035; --border:#d7dde5; --code:#eef1f5;
+      --warn-bg:#fff5db; --warn-border:#e2b657; --warn-text:#6b4e12;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text);
+    font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
+  .wrap { max-width:760px; margin:0 auto; padding:2rem 1.1rem 4rem; }
+  a { color:var(--accent2); }
+  h2 { font-size:1.3rem; margin:2.2rem 0 0.6rem; }
+  p.lead { color:var(--muted); margin-top:0; }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:1.1rem 1.3rem; margin:1.1rem 0; }
+  ul.rules { padding-left:1.2rem; }
+  ul.rules li { margin:0.35rem 0; }
+  .em { color:var(--accent2); font-weight:600; }
+  footer { text-align:center; color:var(--muted); font-size:0.9rem; margin-top:3rem; }
+  footer a { color:var(--muted); }
+</style>
+</head>
+<body>
+{{template "topnav" .}}
+<div class="wrap">
+
+  <h2>House rules</h2>
+  <p class="lead">A few simple rules keep this a friendly place.</p>
+  <section class="card">
+    <ul class="rules">
+      <li>Be kind. This is a small server for friends; treat people the way you want to be treated.</li>
+      <li>No griefing or stealing. Do not break, take, or change other people's builds and chests.
+      The server keeps a log of who changed which blocks, so this is easy to check.</li>
+      <li>Ask before building right next to someone or borrowing their things.</li>
+      <li>No cheats or hacked clients. Play the pack as it comes.</li>
+      <li>Run pack version {{.PackVersion}}, the same as everyone else, and only update when the
+      server says to.</li>
+      <li>Have fun and build something cool.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <p><a href="/">Back to the main page</a> &middot; <a href="{{.TipsPath}}">Player tips</a> &middot;
+    <a href="{{.ParentsPath}}">Parent tips</a></p>
+  </footer>
+
+</div>
+{{template "authscript" .}}
+</body>
+</html>

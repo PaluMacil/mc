@@ -6,8 +6,10 @@ import (
 	_ "embed"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"path"
 	"strconv"
 	"strings"
@@ -37,7 +39,8 @@ type Server struct {
 	sessions *scs.SessionManager
 	mojang   MojangResolver
 	rcon     minecraftRCON
-	presign  presigner // nil when R2 is not configured; Downloads shows unavailable
+	presign  presigner    // nil when R2 is not configured; Downloads shows unavailable
+	lister   objectLister // nil when R2 is not configured; lists the mc-mods bucket
 	players  *playersCache
 	limiter  *ipLimiter
 	loc      *time.Location
@@ -85,7 +88,7 @@ func (s *Server) Handler() http.Handler {
 	// Client downloads + setup guide, for any signed-in user (guests included,
 	// so an invited friend can grab the pack before they are whitelisted).
 	mux.HandleFunc("GET "+base+"/downloads", s.auth.requireAuth(s.downloads))
-	mux.HandleFunc("GET "+base+"/downloads/{id}", s.auth.requireAuth(s.download))
+	mux.HandleFunc("GET "+base+"/downloads/get", s.auth.requireAuth(s.download))
 	mux.HandleFunc("GET "+base+"/login", s.auth.Login)
 	mux.HandleFunc("GET "+base+"/auth/callback", s.auth.Callback)
 	mux.HandleFunc("POST "+base+"/logout", s.auth.Logout)
@@ -159,72 +162,46 @@ func (s *Server) home(w http.ResponseWriter, r *http.Request) {
 	s.render(w, r, views.Home(vm))
 }
 
-// Modpack coordinates shown on the downloads page; keep these in step with the
-// running server (NEOFORGE_VERSION and the pack version in the deploy manifest).
-const (
-	atmPackVersion  = "7.1"
-	neoForgeVersion = "21.1.234"
-)
-
-// downloadItem is one file offered on the downloads page. The id is the URL
-// segment; the R2 object key is resolved server-side from this fixed table so a
-// signed-in user can never presign an arbitrary bucket object.
-type downloadItem struct {
-	id     string
-	object string
-	title  string
-	desc   string
-}
-
-func (s *Server) downloadItems() []downloadItem {
-	return []downloadItem{{
-		id:     "client",
-		object: s.cfg.ClientPackObject,
-		title:  "ATM10 client pack (" + atmPackVersion + ")",
-		desc: "One zip with everything the game needs: all mods, the pack configs, " +
-			"and KubeJS scripts. Extract it into your game folder after installing " +
-			"NeoForge (steps below).",
-	}}
-}
-
-func (s *Server) findDownload(id string) (downloadItem, bool) {
-	for _, it := range s.downloadItems() {
-		if it.id == id {
-			return it, true
-		}
-	}
-	return downloadItem{}, false
-}
-
-// downloads renders the client-pack links and the vanilla-launcher setup guide.
-// Any signed-in user may view it (guests included).
+// downloads lists the whole mc-mods bucket: the client pack (what a
+// vanilla-launcher player wants) and the server files/mods (listed for
+// completeness, not needed to play). Any signed-in user may view it.
 func (s *Server) downloads(w http.ResponseWriter, r *http.Request) {
 	u := userFrom(r.Context())
 	vm := views.DownloadsVM{
 		Nav:           s.nav(u, false),
-		Available:     s.presign != nil,
-		ServerAddress: s.cfg.ServerAddress,
-		FallbackAddr:  "game.danwolf.net:25999",
-		MapURL:        s.cfg.MapURL,
-		NeoForge:      neoForgeVersion,
-		PackVersion:   atmPackVersion,
+		CurseforgeURL: s.cfg.CurseforgeURL,
+		VanillaURL:    s.cfg.VanillaURL,
 	}
-	for _, it := range s.downloadItems() {
-		vm.Files = append(vm.Files, views.DownloadFileVM{
-			Title: it.title,
-			Desc:  it.desc,
-			URL:   s.cfg.BasePath + "/downloads/" + it.id,
-		})
+	if s.lister != nil {
+		if objs, err := s.lister.listObjects(r.Context()); err != nil {
+			s.log.Warn("listing downloads", "err", err)
+		} else {
+			vm.Available = true
+			for _, o := range objs {
+				row := views.DownloadFileVM{
+					Title: o.Key,
+					Size:  humanBytes(o.Size),
+					URL:   s.cfg.BasePath + "/downloads/get?o=" + url.QueryEscape(o.Key),
+				}
+				if o.Key == s.cfg.ClientPackObject {
+					vm.Client = append(vm.Client, row)
+				} else {
+					vm.Server = append(vm.Server, row)
+				}
+			}
+		}
 	}
 	s.render(w, r, views.Downloads(vm))
 }
 
-// download mints a short-lived presigned R2 URL for the requested item and
-// redirects the browser to it, so the download streams from R2 to the client
-// and never through this pod.
+// download mints a short-lived presigned R2 URL for the requested object and
+// redirects the browser to it, so the file streams from R2 to the client and
+// never through this pod. The key comes from the bucket listing; every object in
+// mc-mods is meant to be downloadable and presigning is scoped to that bucket,
+// so an unknown key simply 404s at R2.
 func (s *Server) download(w http.ResponseWriter, r *http.Request) {
-	item, ok := s.findDownload(r.PathValue("id"))
-	if !ok {
+	key := r.URL.Query().Get("o")
+	if key == "" {
 		http.NotFound(w, r)
 		return
 	}
@@ -232,14 +209,27 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Downloads are temporarily unavailable.", http.StatusServiceUnavailable)
 		return
 	}
-	link, err := s.presign.presignGet(item.object, path.Base(item.object), s.cfg.R2PresignTTL)
+	link, err := s.presign.presignGet(key, path.Base(key), s.cfg.R2PresignTTL)
 	if err != nil {
 		s.serverError(w, "presigning download", err)
 		return
 	}
-	u := userFrom(r.Context())
-	s.log.Info("download link issued", "by", u.DisplayName(), "object", item.object)
+	s.log.Info("download link issued", "by", userFrom(r.Context()).DisplayName(), "object", key)
 	http.Redirect(w, r, link, http.StatusFound)
+}
+
+// humanBytes formats a byte count compactly, e.g. "1.5 GB".
+func humanBytes(n int64) string {
+	const unit = 1024
+	if n < unit {
+		return fmt.Sprintf("%d B", n)
+	}
+	div, exp := int64(unit), 0
+	for x := n / unit; x >= unit; x /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(n)/float64(div), "KMGTPE"[exp])
 }
 
 func (s *Server) mint(w http.ResponseWriter, r *http.Request) {
@@ -437,16 +427,19 @@ func (s *Server) inviteState(ctx context.Context, token string) string {
 func (s *Server) nav(u User, public bool) views.NavVM {
 	base := s.cfg.BasePath
 	n := views.NavVM{
-		HomeURL:      base + "/",
-		DownloadsURL: base + "/downloads",
-		LoginURL:     base + "/login",
-		LogoutURL:    base + "/logout",
-		LandingURL:   s.cfg.SiteURL,
-		MapURL:       s.cfg.MapURL,
-		TipsURL:      s.cfg.TipsURL,
-		ParentsURL:   s.cfg.ParentsURL,
-		MetricsURL:   s.cfg.MetricsURL,
-		HideAuth:     public,
+		HomeURL:       base + "/",
+		DownloadsURL:  base + "/downloads",
+		LoginURL:      base + "/login",
+		LogoutURL:     base + "/logout",
+		LandingURL:    s.cfg.SiteURL,
+		MapURL:        s.cfg.MapURL,
+		TipsURL:       s.cfg.TipsURL,
+		ParentsURL:    s.cfg.ParentsURL,
+		RulesURL:      s.cfg.RulesURL,
+		CurseforgeURL: s.cfg.CurseforgeURL,
+		VanillaURL:    s.cfg.VanillaURL,
+		MetricsURL:    s.cfg.MetricsURL,
+		HideAuth:      public,
 	}
 	if !public {
 		n.HtmxSrc = base + "/assets/htmx.min.js"
@@ -479,7 +472,7 @@ func (s *Server) inviteRow(inv Invite, u User, showOwner bool) views.InviteRowVM
 		CanCancel:     canCancel,
 	}
 	if showOwner {
-		row.CreatedBy = cmp.Or(inv.CreatedByName, inv.CreatedBy)
+		row.CreatedBy = humanWho(cmp.Or(inv.CreatedByName, inv.CreatedBy))
 	}
 	if canCancel {
 		u := s.cfg.BasePath + "/invites/" + strconv.FormatInt(inv.ID, 10) + "/cancel"
@@ -497,7 +490,7 @@ func (s *Server) auditRows(entries []AuditEntry) []views.AuditRowVM {
 		action, detail := s.friendlyAudit(e)
 		rows = append(rows, views.AuditRowVM{
 			At:     s.fmtTime(e.At),
-			Who:    cmp.Or(e.ActorName, e.Actor),
+			Who:    humanWho(cmp.Or(e.ActorName, e.Actor)),
 			Action: action,
 			Detail: detail,
 		})
@@ -525,6 +518,20 @@ func (s *Server) friendlyAudit(e AuditEntry) (action, detail string) {
 	default:
 		return e.Action, string(e.Detail)
 	}
+}
+
+// humanWho renders an actor for the UI. Real names and emails pass through; a
+// raw OIDC subject (a long opaque token with no '@' or space, e.g. a historical
+// row written before names were captured) is shortened via shortSubject so the
+// table shows "id:1646ac34…" instead of a 64-hex hash.
+func humanWho(s string) string {
+	if s == "" {
+		return "unknown"
+	}
+	if strings.ContainsAny(s, "@ ") || len(s) <= 20 {
+		return s
+	}
+	return shortSubject(s)
 }
 
 func (s *Server) fmtTime(t time.Time) string {

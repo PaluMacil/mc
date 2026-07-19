@@ -82,197 +82,223 @@ func Layout(title string, nav NavVM) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\">All the Mods 10</a><nav class=\"mainnav\"><a href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\">Danland</a><nav class=\"mainnav\"><a class=\"ext\" href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var5 templ.SafeURL
-		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(nav.LandingURL))
+		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(nav.MapURL))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 20, Col: 44}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 20, Col: 52}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\">Home</a> <a href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\" target=\"_blank\" rel=\"noopener\">Map <svg class=\"exticon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6\"></path> <path d=\"M15 3h6v6\"></path> <path d=\"M10 14 21 3\"></path></svg></a> <details class=\"navdrop\"><summary>Tips <span class=\"caret\" aria-hidden=\"true\">&#9662;</span></summary><div class=\"menu\"><a href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var6 templ.SafeURL
-		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(nav.MapURL))
+		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(nav.TipsURL))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 21, Col: 40}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 31, Col: 43}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\">Live map</a> <a href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\">ATM10</a> <a href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var7 templ.SafeURL
-		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(nav.TipsURL))
+		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(nav.ParentsURL))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 22, Col: 41}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 32, Col: 46}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\">Player tips</a> <a href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\">Parents</a> <a href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var8 templ.SafeURL
-		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(nav.ParentsURL))
+		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(nav.RulesURL))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 23, Col: 44}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 33, Col: 44}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\">Parent tips</a> ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\">Rules</a> <a href=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var9 templ.SafeURL
+		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(nav.CurseforgeURL))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 34, Col: 49}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "\">CurseForge Install</a> <a href=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var10 templ.SafeURL
+		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(nav.VanillaURL))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 35, Col: 46}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\">Vanilla Launcher Install</a></div></details> ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if nav.SignedIn {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<a href=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<a href=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var9 templ.SafeURL
-			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(nav.HomeURL))
+			var templ_7745c5c3_Var11 templ.SafeURL
+			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(nav.HomeURL))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 25, Col: 42}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 39, Col: 42}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\">Dashboard</a> <a href=\"")
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var10 templ.SafeURL
-			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(nav.DownloadsURL))
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 26, Col: 47}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\">Invite</a> <a href=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\">Downloads</a>")
+			var templ_7745c5c3_Var12 templ.SafeURL
+			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(nav.DownloadsURL))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 40, Col: 47}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "\">Downloads</a>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</nav>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</nav>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if !nav.HideAuth {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "<div class=\"authnav\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<div class=\"authnav\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			if nav.SignedIn {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<details class=\"usermenu\"><summary>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "<details class=\"usermenu\"><summary>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				if nav.IsAdmin {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<span class=\"pill admin\">admin</span> ")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<span class=\"pill admin\">admin</span> ")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 				} else if nav.IsInviter {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "<span class=\"pill\">inviter</span> ")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "<span class=\"pill\">inviter</span> ")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<span class=\"who\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<span class=\"who\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var11 string
-				templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(nav.Name)
+				var templ_7745c5c3_Var13 string
+				templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(nav.Name)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 39, Col: 37}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "</span> <span class=\"caret\" aria-hidden=\"true\">▾</span></summary><div class=\"menu\">")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				if nav.IsAdmin && nav.MetricsURL != "" {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<a href=\"")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					var templ_7745c5c3_Var12 templ.SafeURL
-					templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(nav.MetricsURL))
-					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 44, Col: 49}
-					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "\" target=\"_blank\" rel=\"noopener\">Metrics dashboard</a>")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<form method=\"post\" action=\"")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				var templ_7745c5c3_Var13 templ.SafeURL
-				templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(nav.LogoutURL))
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 46, Col: 66}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 53, Col: 37}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "\"><button class=\"menuitem\" type=\"submit\">Sign out</button></form></div></details>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "</span> <span class=\"caret\" aria-hidden=\"true\">&#9662;</span></summary><div class=\"menu\">")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				if nav.IsAdmin && nav.MetricsURL != "" {
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<a href=\"")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					var templ_7745c5c3_Var14 templ.SafeURL
+					templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(nav.MetricsURL))
+					if templ_7745c5c3_Err != nil {
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 58, Col: 49}
+					}
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "\" target=\"_blank\" rel=\"noopener\">Metrics dashboard</a>")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<form method=\"post\" action=\"")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var15 templ.SafeURL
+				templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(nav.LogoutURL))
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 60, Col: 66}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "\"><button class=\"menuitem\" type=\"submit\">Sign out</button></form></div></details>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			} else {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<a class=\"linkbtn\" href=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "<a class=\"linkbtn\" href=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var14 templ.SafeURL
-				templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(nav.LoginURL))
+				var templ_7745c5c3_Var16 templ.SafeURL
+				templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(nav.LoginURL))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 52, Col: 60}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout.templ`, Line: 66, Col: 60}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "\">Sign in</a>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "\">Sign in</a>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "</div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "</div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "</header><main class=\"wrap\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "</header><main class=\"wrap\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -280,7 +306,7 @@ func Layout(title string, nav NavVM) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "</main><script>\n\t\t\t\t// Copy the text of the button's previous sibling (an invite link\n\t\t\t\t// or an address). No-op if the clipboard API is unavailable.\n\t\t\t\tfunction mcCopy(btn) {\n\t\t\t\t\tvar el = btn.previousElementSibling;\n\t\t\t\t\tif (!el || !navigator.clipboard) return;\n\t\t\t\t\tnavigator.clipboard.writeText(el.textContent.trim()).then(function () {\n\t\t\t\t\t\tvar old = btn.textContent;\n\t\t\t\t\t\tbtn.textContent = \"Copied\";\n\t\t\t\t\t\tsetTimeout(function () { btn.textContent = old; }, 1200);\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script></body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "</main><script>\n\t\t\t\t// Copy the text of the button's previous sibling (an invite link\n\t\t\t\t// or an address). No-op if the clipboard API is unavailable.\n\t\t\t\tfunction mcCopy(btn) {\n\t\t\t\t\tvar el = btn.previousElementSibling;\n\t\t\t\t\tif (!el || !navigator.clipboard) return;\n\t\t\t\t\tnavigator.clipboard.writeText(el.textContent.trim()).then(function () {\n\t\t\t\t\t\tvar old = btn.textContent;\n\t\t\t\t\t\tbtn.textContent = \"Copied\";\n\t\t\t\t\t\tsetTimeout(function () { btn.textContent = old; }, 1200);\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script></body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -304,12 +330,12 @@ func styles() templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var15 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var15 == nil {
-			templ_7745c5c3_Var15 = templ.NopComponent
+		templ_7745c5c3_Var17 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var17 == nil {
+			templ_7745c5c3_Var17 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "<style>\n\t\t:root {\n\t\t\t--bg:#14161a; --panel:#1e2128; --panel2:#262a33; --text:#e8eaed;\n\t\t\t--muted:#a7adba; --accent:#5db462; --accent2:#7fd884; --border:#333844;\n\t\t\t--code:#0f1115; --danger:#e06c75; --danger-bg:#3a1e20; --danger-border:#7a3236;\n\t\t\t--ok-bg:#1d3324; --ok-border:#2f6b41;\n\t\t}\n\t\t@media (prefers-color-scheme: light) {\n\t\t\t:root {\n\t\t\t\t--bg:#f4f6f8; --panel:#fff; --panel2:#eef1f5; --text:#1b1e24;\n\t\t\t\t--muted:#566072; --accent:#2f8f43; --accent2:#257035; --border:#d7dde5;\n\t\t\t\t--code:#eef1f5; --danger:#b3261e; --danger-bg:#fbe9e7; --danger-border:#e2a19c;\n\t\t\t\t--ok-bg:#e7f4ea; --ok-border:#9bcfa8;\n\t\t\t}\n\t\t}\n\t\t* { box-sizing:border-box; }\n\t\tbody { margin:0; background:var(--bg); color:var(--text);\n\t\t\tfont:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }\n\t\ta { color:var(--accent2); }\n\t\t.topbar { display:flex; align-items:center; flex-wrap:wrap;\n\t\t\tgap:0.6rem 1.1rem; padding:0.8rem 1.1rem; border-bottom:1px solid var(--border); background:var(--panel); }\n\t\t.brand { font-weight:700; text-decoration:none; color:var(--text); }\n\t\t.mainnav { display:flex; gap:1rem; flex-wrap:wrap; }\n\t\t.mainnav a { color:var(--muted); text-decoration:none; }\n\t\t.mainnav a:hover { color:var(--text); }\n\t\t.authnav { display:flex; align-items:center; gap:0.7rem; margin-left:auto; }\n\t\t.who { color:var(--muted); font-size:0.9rem; }\n\t\t.pill { background:var(--panel2); border:1px solid var(--border); color:var(--muted);\n\t\t\tborder-radius:999px; padding:0.1rem 0.6rem; font-size:0.78rem; }\n\t\t.pill.admin { background:var(--accent); color:#06210b; border-color:transparent; font-weight:700; }\n\t\t.linkbtn { font:inherit; font-size:0.9rem; background:none; border:0; color:var(--accent2);\n\t\t\tcursor:pointer; padding:0; text-decoration:underline; }\n\t\t/* Username dropdown (no JS): a <details> whose <summary> is the name. */\n\t\t.usermenu { position:relative; }\n\t\t.usermenu > summary { list-style:none; cursor:pointer; display:flex; align-items:center;\n\t\t\tgap:0.4rem; padding:0.25rem 0.5rem; border:1px solid var(--border); border-radius:8px;\n\t\t\tbackground:var(--panel2); }\n\t\t.usermenu > summary::-webkit-details-marker { display:none; }\n\t\t.usermenu > summary:hover, .usermenu[open] > summary { border-color:var(--muted); }\n\t\t.usermenu .caret { color:var(--muted); font-size:0.75rem; }\n\t\t.usermenu .menu { position:absolute; right:0; top:calc(100% + 0.35rem); min-width:12rem;\n\t\t\tbackground:var(--panel); border:1px solid var(--border); border-radius:10px; padding:0.35rem;\n\t\t\tdisplay:flex; flex-direction:column; gap:0.1rem; box-shadow:0 8px 24px rgba(0,0,0,0.35); z-index:20; }\n\t\t.usermenu .menu form { margin:0; }\n\t\t.usermenu .menu a, .usermenu .menu .menuitem { display:block; width:100%; text-align:left;\n\t\t\tfont:inherit; font-size:0.92rem; color:var(--text); text-decoration:none; background:none;\n\t\t\tborder:0; cursor:pointer; padding:0.45rem 0.6rem; border-radius:7px; }\n\t\t.usermenu .menu a:hover, .usermenu .menu .menuitem:hover { background:var(--panel2); }\n\t\t.wrap { max-width:820px; margin:0 auto; padding:1.6rem 1.1rem 4rem; }\n\t\th1 { font-size:1.6rem; margin:0.4rem 0 0.2rem; }\n\t\th2 { font-size:1.2rem; margin:2rem 0 0.6rem; }\n\t\tp.lead { color:var(--muted); margin-top:0; }\n\t\t.card { background:var(--panel); border:1px solid var(--border); border-radius:12px;\n\t\t\tpadding:1.1rem 1.2rem; margin:1.1rem 0; }\n\t\t.btn { display:inline-block; font:inherit; font-weight:600; cursor:pointer;\n\t\t\tbackground:var(--accent); color:#06210b; border:0; border-radius:9px; padding:0.6rem 1rem; text-decoration:none; }\n\t\t.btn:hover { background:var(--accent2); }\n\t\t.btn[disabled] { opacity:0.5; cursor:not-allowed; }\n\t\tinput[type=text] { font:inherit; width:100%; padding:0.6rem 0.7rem; border-radius:8px;\n\t\t\tborder:1px solid var(--border); background:var(--code); color:var(--text); }\n\t\tlabel { display:block; font-weight:600; margin-bottom:0.3rem; }\n\t\t.link { display:flex; gap:0.5rem; align-items:center; margin-top:0.6rem; }\n\t\t.link code { flex:1; background:var(--code); border:1px solid var(--border); border-radius:8px;\n\t\t\tpadding:0.55rem 0.7rem; overflow-x:auto; white-space:nowrap; font-family:ui-monospace,Menlo,Consolas,monospace; }\n\t\t.muted { color:var(--muted); }\n\t\ttable { width:100%; border-collapse:collapse; margin-top:0.6rem; font-size:0.94rem; }\n\t\tth,td { text-align:left; padding:0.5rem 0.6rem; border-bottom:1px solid var(--border); vertical-align:top; }\n\t\tth { color:var(--muted); font-weight:600; }\n\t\t.status-active { color:var(--accent2); font-weight:600; }\n\t\t.status-used { color:var(--muted); }\n\t\t.status-expired { color:var(--danger); }\n\t\t.notice { border-radius:10px; padding:0.8rem 1rem; margin:1rem 0; }\n\t\t.notice.err { background:var(--danger-bg); border:1px solid var(--danger-border); color:var(--danger); }\n\t\t.notice.ok { background:var(--ok-bg); border:1px solid var(--ok-border); }\n\t\t.detail { color:var(--muted); }\n\t\t.statusbar { display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;\n\t\t\tbackground:var(--panel); border:1px solid var(--border); border-radius:10px;\n\t\t\tpadding:0.6rem 0.9rem; margin:1rem 0; }\n\t\t.dot { width:0.6rem; height:0.6rem; border-radius:50%; background:var(--accent); display:inline-block; }\n\t\t.dot.off { background:var(--muted); }\n\t\t.pcount { font-weight:700; }\n\t\t.pnames { color:var(--muted); display:flex; gap:0.35rem; flex-wrap:wrap; align-items:center; }\n\t\t.pchip { background:var(--panel2); border:1px solid var(--border); color:var(--text);\n\t\t\tborder-radius:999px; padding:0.05rem 0.55rem; font-size:0.85rem; }\n\t\t.statusbar .maplink { margin-left:auto; }\n\t\t.cancelbtn { font:inherit; font-size:0.82rem; cursor:pointer; background:none;\n\t\t\tborder:1px solid var(--border); color:var(--danger); border-radius:6px; padding:0.2rem 0.5rem; }\n\t\t.cancelbtn:hover { background:var(--danger-bg); }\n\t\t.status-canceled { color:var(--muted); text-decoration:line-through; }\n\t</style>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "<style>\n\t\t:root {\n\t\t\t--bg:#14161a; --panel:#1e2128; --panel2:#262a33; --text:#e8eaed;\n\t\t\t--muted:#a7adba; --accent:#5db462; --accent2:#7fd884; --border:#333844;\n\t\t\t--code:#0f1115; --danger:#e06c75; --danger-bg:#3a1e20; --danger-border:#7a3236;\n\t\t\t--ok-bg:#1d3324; --ok-border:#2f6b41;\n\t\t}\n\t\t@media (prefers-color-scheme: light) {\n\t\t\t:root {\n\t\t\t\t--bg:#f4f6f8; --panel:#fff; --panel2:#eef1f5; --text:#1b1e24;\n\t\t\t\t--muted:#566072; --accent:#2f8f43; --accent2:#257035; --border:#d7dde5;\n\t\t\t\t--code:#eef1f5; --danger:#b3261e; --danger-bg:#fbe9e7; --danger-border:#e2a19c;\n\t\t\t\t--ok-bg:#e7f4ea; --ok-border:#9bcfa8;\n\t\t\t}\n\t\t}\n\t\t* { box-sizing:border-box; }\n\t\tbody { margin:0; background:var(--bg); color:var(--text);\n\t\t\tfont:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }\n\t\ta { color:var(--accent2); }\n\t\t.topbar { display:flex; align-items:center; flex-wrap:wrap;\n\t\t\tgap:0.6rem 1.1rem; padding:0.8rem 1.1rem; border-bottom:1px solid var(--border); background:var(--panel); }\n\t\t.brand { font-weight:700; text-decoration:none; color:var(--text); }\n\t\t.mainnav { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }\n\t\t.mainnav a { color:var(--muted); text-decoration:none; font-weight:600; }\n\t\t.mainnav a:hover { color:var(--text); }\n\t\t.mainnav a.ext { display:inline-flex; align-items:center; gap:0.25rem; }\n\t\t.exticon { width:0.8em; height:0.8em; opacity:0.7; }\n\t\t.authnav { display:flex; align-items:center; gap:0.7rem; margin-left:auto; }\n\t\t.who { color:var(--text); font-size:0.9rem; }\n\t\t.pill { background:var(--panel2); border:1px solid var(--border); color:var(--muted);\n\t\t\tborder-radius:999px; padding:0.1rem 0.6rem; font-size:0.78rem; }\n\t\t.pill.admin { background:var(--accent); color:#06210b; border-color:transparent; font-weight:700; }\n\t\t.linkbtn { font:inherit; font-size:0.9rem; background:none; border:0; color:var(--accent2);\n\t\t\tcursor:pointer; padding:0; text-decoration:underline; }\n\t\t/* Dropdowns (no JS): .navdrop = nav-link summary (Tips); .usermenu = pill summary (name). */\n\t\t.navdrop, .usermenu { position:relative; }\n\t\t.navdrop > summary, .usermenu > summary { list-style:none; cursor:pointer; }\n\t\t.navdrop > summary::-webkit-details-marker, .usermenu > summary::-webkit-details-marker { display:none; }\n\t\t.navdrop > summary { display:inline-flex; align-items:center; gap:0.3rem; color:var(--muted); font-weight:600; }\n\t\t.navdrop > summary:hover, .navdrop[open] > summary { color:var(--text); }\n\t\t.usermenu > summary { display:flex; align-items:center; gap:0.4rem; padding:0.25rem 0.5rem;\n\t\t\tborder:1px solid var(--border); border-radius:8px; background:var(--panel2); }\n\t\t.usermenu > summary:hover, .usermenu[open] > summary { border-color:var(--muted); }\n\t\t.caret { color:var(--muted); font-size:0.75rem; }\n\t\t.menu { position:absolute; top:calc(100% + 0.35rem); min-width:13rem; background:var(--panel);\n\t\t\tborder:1px solid var(--border); border-radius:10px; padding:0.35rem; display:flex;\n\t\t\tflex-direction:column; gap:0.1rem; box-shadow:0 8px 24px rgba(0,0,0,0.35); z-index:20; }\n\t\t.navdrop .menu { left:0; }\n\t\t.usermenu .menu { right:0; }\n\t\t.menu form { margin:0; }\n\t\t.menu a, .menu .menuitem { display:block; width:100%; text-align:left; font:inherit; font-size:0.92rem;\n\t\t\tcolor:var(--text); text-decoration:none; font-weight:500; background:none; border:0; cursor:pointer;\n\t\t\tpadding:0.45rem 0.6rem; border-radius:7px; }\n\t\t.menu a:hover, .menu .menuitem:hover { background:var(--panel2); color:var(--text); }\n\t\t.wrap { max-width:820px; margin:0 auto; padding:1.6rem 1.1rem 4rem; }\n\t\th1 { font-size:1.6rem; margin:0.4rem 0 0.2rem; }\n\t\th2 { font-size:1.2rem; margin:2rem 0 0.6rem; }\n\t\tp.lead { color:var(--muted); margin-top:0; }\n\t\t.card { background:var(--panel); border:1px solid var(--border); border-radius:12px;\n\t\t\tpadding:1.1rem 1.2rem; margin:1.1rem 0; }\n\t\t.btn { display:inline-block; font:inherit; font-weight:600; cursor:pointer;\n\t\t\tbackground:var(--accent); color:#06210b; border:0; border-radius:9px; padding:0.6rem 1rem; text-decoration:none; }\n\t\t.btn:hover { background:var(--accent2); }\n\t\t.btn[disabled] { opacity:0.5; cursor:not-allowed; }\n\t\t.btn.sm { padding:0.4rem 0.75rem; font-size:0.85rem; }\n\t\t.banner { background:var(--panel2); border:1px solid var(--border); border-left:3px solid var(--accent);\n\t\t\tborder-radius:10px; padding:0.8rem 1rem; margin:1rem 0; }\n\t\t.dlrow { display:flex; align-items:center; gap:0.8rem; flex-wrap:wrap;\n\t\t\tpadding:0.6rem 0; border-bottom:1px solid var(--border); }\n\t\t.dlrow:last-child { border-bottom:0; }\n\t\t.dlrow .dlname { flex:1; min-width:12rem; word-break:break-all; }\n\t\t.dlrow .dlsize { color:var(--muted); font-size:0.85rem; font-variant-numeric:tabular-nums; }\n\t\tinput[type=text] { font:inherit; width:100%; padding:0.6rem 0.7rem; border-radius:8px;\n\t\t\tborder:1px solid var(--border); background:var(--code); color:var(--text); }\n\t\tlabel { display:block; font-weight:600; margin-bottom:0.3rem; }\n\t\t.link { display:flex; gap:0.5rem; align-items:center; margin-top:0.6rem; }\n\t\t.link code { flex:1; background:var(--code); border:1px solid var(--border); border-radius:8px;\n\t\t\tpadding:0.55rem 0.7rem; overflow-x:auto; white-space:nowrap; font-family:ui-monospace,Menlo,Consolas,monospace; }\n\t\t.muted { color:var(--muted); }\n\t\ttable { width:100%; border-collapse:collapse; margin-top:0.6rem; font-size:0.94rem; }\n\t\tth,td { text-align:left; padding:0.5rem 0.6rem; border-bottom:1px solid var(--border); vertical-align:top; }\n\t\tth { color:var(--muted); font-weight:600; }\n\t\t.status-active { color:var(--accent2); font-weight:600; }\n\t\t.status-used { color:var(--muted); }\n\t\t.status-expired { color:var(--danger); }\n\t\t.notice { border-radius:10px; padding:0.8rem 1rem; margin:1rem 0; }\n\t\t.notice.err { background:var(--danger-bg); border:1px solid var(--danger-border); color:var(--danger); }\n\t\t.notice.ok { background:var(--ok-bg); border:1px solid var(--ok-border); }\n\t\t.detail { color:var(--muted); }\n\t\t.statusbar { display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;\n\t\t\tbackground:var(--panel); border:1px solid var(--border); border-radius:10px;\n\t\t\tpadding:0.6rem 0.9rem; margin:1rem 0; }\n\t\t.dot { width:0.6rem; height:0.6rem; border-radius:50%; background:var(--accent); display:inline-block; }\n\t\t.dot.off { background:var(--muted); }\n\t\t.pcount { font-weight:700; }\n\t\t.pnames { color:var(--muted); display:flex; gap:0.35rem; flex-wrap:wrap; align-items:center; }\n\t\t.pchip { background:var(--panel2); border:1px solid var(--border); color:var(--text);\n\t\t\tborder-radius:999px; padding:0.05rem 0.55rem; font-size:0.85rem; }\n\t\t.statusbar .maplink { margin-left:auto; }\n\t\t.cancelbtn { font:inherit; font-size:0.82rem; cursor:pointer; background:none;\n\t\t\tborder:1px solid var(--border); color:var(--danger); border-radius:6px; padding:0.2rem 0.5rem; }\n\t\t.cancelbtn:hover { background:var(--danger-bg); }\n\t\t.status-canceled { color:var(--muted); text-decoration:line-through; }\n\t</style>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
