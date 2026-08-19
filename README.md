@@ -40,6 +40,24 @@ player (ATM10 client)
   -> StatefulSet mc, pinned to jade
 ```
 
+**The server does not see tin's IP; it sees `10.42.2.1`.** Two rewrites
+happen on that second-to-last hop, and only one of them is ours.
+`externalTrafficPolicy: Local` suppresses the SNAT that kube-proxy would
+otherwise apply, but flannel's own `FLANNEL-POSTRTG` chain masquerades
+anything arriving from outside the pod CIDR
+(`! -s 10.42.0.0/16 -d 10.42.0.0/16 -j MASQUERADE`), and that fires
+regardless. So every player logs in from the flannel gateway address on
+jade, and the server log reads
+`Nividica[/10.42.2.1:58810] logged in`, never `108.165.213.64`.
+
+The practical effect is unchanged from what this doc already assumed:
+in-game IP bans are useless and per-IP nuisance control has to live in
+tin's nginx (see the `limit_conn` block there). What changes is only the
+explanation. `externalTrafficPolicy: Local` is still worth keeping for
+its other property, that only nodes running the pod answer on the
+NodePort, which is what lets tin point straight at jade with no extra
+hop. It is just not buying source-IP preservation here.
+
 Web traffic for the same hostname (Phase 2: landing page and BlueMap) is
 an ordinary cluster workload behind the Cloudflare Tunnel and Traefik,
 completely separate from the game path.

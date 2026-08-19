@@ -4,9 +4,12 @@
 # externalTrafficPolicy: Local does two things here:
 #   1. Only nodes running the pod answer on the NodePort. The pod is pinned
 #      to jade, so tin points at jade and there is no extra intra-cluster hop.
-#   2. The client source IP is preserved (no SNAT). Every player already
-#      arrives with tin's IP because of the stream proxy; at least we do not
-#      stack a second rewrite on top.
+#   2. It suppresses kube-proxy's SNAT. Note that this does NOT get us the
+#      client source IP: flannel's FLANNEL-POSTRTG chain masquerades anything
+#      from outside the pod CIDR anyway, so the server sees 10.42.2.1 (the
+#      flannel gateway on jade) for every player, not tin's IP and certainly
+#      not the player's. Verified by packet capture 2026-08-18. Keep the
+#      policy for reason 1; do not rely on it for source IPs.
 apiVersion: v1
 kind: Service
 metadata:

@@ -106,7 +106,11 @@ Sibling repos, usually cloned alongside this one:
   swap those; replicated sync writes hurt the tick loop, and
   un-replicated backups defeat their purpose.
 - `externalTrafficPolicy: Local` on `mc-game`, NodePort 30565: tin's
-  nginx points at jade's tailnet IP specifically.
+  nginx points at jade's tailnet IP specifically. It buys the "only nodes
+  running the pod answer" property, NOT source-IP preservation: flannel's
+  FLANNEL-POSTRTG masquerade rewrites every player to 10.42.2.1 regardless,
+  which is what the server logs. IP bans in-game are therefore useless; the
+  per-IP cap in tin's nginx is the only place that control can live.
 - BlueMap (Phase 2): `SYNC_SKIP_NEWER_IN_DESTINATION=false` is
   load-bearing; it is what re-applies `deploy/base/bluemap/core.conf` from
   the `/config` overlay every boot. Do not set BlueMap's webserver `ip`
