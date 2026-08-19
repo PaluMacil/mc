@@ -272,11 +272,26 @@ spec:
           resources:
             requests:
               cpu: "4"
-              memory: 13Gi
+              # Sized above the JVM's committed footprint, not below it. Aikar's
+              # flags set -Xms=-Xmx, so MEMORY=12G is committed at boot whether
+              # it is used or not; add ~1.1GB non-heap plus direct buffers and
+              # thread stacks and the container is ~14.4GB from the moment it
+              # starts. This is not leak-driven growth: over 11 days RSS moved
+              # 14.39 -> 14.92GiB, i.e. ~10MB/day and decelerating.
+              memory: 16Gi
             limits:
               # No CPU limit on purpose. The tick loop is single-threaded and
               # CFS throttling tanks TPS. Do not add one.
-              memory: 16Gi
+              #
+              # 20Gi, not 16Gi. At 16Gi the cgroup sat ~7MB under its ceiling
+              # and had hit the hard limit 55,044 times in 11 days, leaving
+              # ~1.1GB of page cache to serve a 5GB world. Every chunk load had
+              # to reclaim first, and that direct reclaim lands on whichever
+              # thread allocates, frequently the server thread. It never OOM
+              # killed (file cache always yields), it just ground. The headroom
+              # here is for page cache and off-heap, so do not "reclaim" it by
+              # lowering this back toward MEMORY.
+              memory: 20Gi
           startupProbe:
             # First boot installs NeoForge, applies the 1.1GB pack, and
             # generates spawn before the port ever opens. Budget:

@@ -85,6 +85,23 @@ Sibling repos, usually cloned alongside this one:
   with the `force_load_mode` enum; `always` is the old `true`. The file is
   per-world state on the data volume, so the edit lives in the initContainer,
   not a mounted config; our value wins every boot (an in-game change reverts).
+- The mc container's memory **limit is 20Gi against `MEMORY=12G`**, and the
+  gap is deliberate. Aikar's flags set `-Xms=-Xmx`, so the heap is committed
+  at boot and the container is ~14.4GB from the moment it starts; at the old
+  16Gi limit the cgroup sat ~7MB under its ceiling and had hit the hard limit
+  55,044 times in 11 days, leaving ~1.1GB of page cache for a 5GB world. The
+  resulting direct reclaim lands on the server thread and stalls ticks. Do not
+  shrink this back toward `MEMORY`; the headroom is for page cache and
+  off-heap, not slack.
+- **The heap does not leak.** Before assuming ATM10 leaks are behind a
+  complaint, check first: 11 days of `jvm_memory_bytes_used` was flat sawtooth,
+  `jvm_gc_collection_seconds_count{gc="G1 Old Generation"}` was 0, and RSS grew
+  ~10MB/day and decelerating. `mc-nightly-restart` (04:00 America/New_York,
+  `restart-cronjob.yaml`) exists because players asked for it and it clears mod
+  state, not because it reclaims memory. It drives RCON `stop` rather than
+  deleting the pod, so it needs no ServiceAccount or `pods/delete` grant, and
+  it must use the `-ubuntu` rcon-cli tag (the default tag has no shell, so the
+  countdown script exits 127 and the restart silently never fires).
 - World data on `local-path` (jade NVMe), backups on `longhorn`. Never
   swap those; replicated sync writes hurt the tick loop, and
   un-replicated backups defeat their purpose.

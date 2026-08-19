@@ -1,0 +1,84 @@
+# Nightly game-server restart, 04:00 America/New_York.
+#
+# Why this exists: the players asked for it, and modded servers accumulate
+# state no metric captures (AllTheLeaks was tracking 12 retained ServerPlayer
+# objects across 41 logouts). It is NOT a memory fix. The heap does not leak
+# (11 days of jvm_memory_bytes_used is flat sawtooth, and G1 Old Generation
+# collections were 0), and container RSS grows ~10MB/day and decelerating, so
+# a nightly restart reclaims almost nothing. Container memory headroom is what
+# fixes the reclaim stalls; see the resources block in statefulset.yaml.
+#
+# This drives RCON rather than deleting the pod, which means it needs no
+# ServiceAccount, no Role, and no pods/delete grant anywhere. `stop` saves the
+# world and exits the JVM cleanly; kubelet then restarts the container in place
+# under the StatefulSet's restartPolicy, with no rescheduling or PVC reattach.
+#
+# Because we send every warning ourselves, STOP_SERVER_ANNOUNCE_DELAY (which
+# only fires on SIGTERM) is deliberately not involved and stays as it is.
+#
+# timeZone is explicit: the mc container's TZ is America/Chicago, so omitting
+# this would silently restart at 04:00 Central. Both players are Eastern.
+#
+# ATM10 takes several minutes to boot, so the server is down until ~04:06.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mc-nightly-restart
+spec:
+  schedule: "55 3 * * *"
+  timeZone: America/New_York
+  # Never let two of these overlap, and never fire a stale one late: a missed
+  # 04:00 must not restart the server at, say, 09:00 on top of live players.
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 120
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      # No retries on purpose. If this dies partway through the countdown, the
+      # correct outcome is "no restart tonight", not a second attempt that
+      # stops the server at an unannounced time.
+      backoffLimit: 0
+      activeDeadlineSeconds: 420
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: rcon
+              # The -ubuntu variant, not the default minimal one: the plain
+              # tag ships the bare binary with no shell, so the `sh -c` script
+              # below exits 127 and the restart silently never happens.
+              # Verified: plain 1.7.7 fails to start, 1.7.7-ubuntu runs.
+              image: itzg/rcon-cli:1.7.7-ubuntu
+              env:
+                - name: RCON_HOST
+                  value: mc-rcon
+                - name: RCON_PORT
+                  value: "25575"
+                - name: RCON_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: mc-secrets
+                      key: rcon-password
+              command:
+                - sh
+                - -c
+                - |
+                  set -eu
+                  # Cron fires at 03:55; the sleeps below walk to 04:00 exactly.
+                  rcon-cli say "Server restarting in 5 minutes."
+                  sleep 240
+                  rcon-cli say "Server restarting in 1 minute."
+                  sleep 30
+                  rcon-cli say "Server restarting in 30 seconds."
+                  sleep 20
+                  rcon-cli say "Server restarting in 10 seconds. Hold on to your stuff."
+                  rcon-cli save-all
+                  sleep 10
+                  rcon-cli stop
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 32Mi
+                limits:
+                  memory: 64Mi
