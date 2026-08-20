@@ -121,6 +121,24 @@ Sibling repos, usually cloned alongside this one:
   it is still never reachable from outside the cluster. The password stays
   the shared `mc-secrets/rcon-password`.
 
+## Diagnosing a sick server
+
+`scripts/mc-health.sh` (read-only; `--node` adds cgroup and network-path
+probes on jade) plus the `mc-health` skill in `.claude/skills/`. Read the
+skill before interpreting anything: several of these metrics mislead when
+read raw. The short version, each of which cost real debugging time:
+
+- `memory.events max`, not RSS or heap, is what reveals reclaim stalls. It
+  never triggers an OOM kill and never shows up in kube events.
+- ATM10 emits ~180 ERROR lines at every boot (baseline 81/145/49). Only a
+  delta against the previous boot means anything.
+- `Timed out` and `Disconnected` are different events; the latter is a normal
+  quit. And a player-specific symptom proves nothing until you check who else
+  was online, since a lone player is a sample of one.
+- A healthy mean tick does not rule out multi-second stalls. Use BlueMap's
+  ~10s region-watcher lines in `debug.log` as a heartbeat to tell a server
+  stall apart from a network problem.
+
 ## Releasing a change
 
 Tag this repo, then bump the `?ref=` pin in homelab
