@@ -93,6 +93,13 @@ Sibling repos, usually cloned alongside this one:
   resulting direct reclaim lands on the server thread and stalls ticks. Do not
   shrink this back toward `MEMORY`; the headroom is for page cache and
   off-heap, not slack.
+- The nightly restart has a second, better justification than the folklore
+  one: MEGA cells (`megacells-4.11.0.jar`) degrade with uptime. Their storage
+  calculation deactivates the cell if it cannot finish inside one tick, and
+  that state accumulates. Do not remove `mc-nightly-restart` on the grounds
+  that memory does not need it (it does not); AE2 state does. The failsafe
+  logs nothing server-side and has no config tunable, so keeping the tick
+  budget healthy is the only lever we control.
 - **The heap does not leak.** Before assuming ATM10 leaks are behind a
   complaint, check first: 11 days of `jvm_memory_bytes_used` was flat sawtooth,
   `jvm_gc_collection_seconds_count{gc="G1 Old Generation"}` was 0, and RSS grew

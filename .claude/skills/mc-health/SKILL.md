@@ -144,6 +144,44 @@ in-game indication. Rare (3 events in ~5 weeks) and upstream, so it is not
 the explanation for large-scale loss, but it is real and worth reporting when
 a player asks where something went.
 
+## AE2 desync: MEGA cells, not infrastructure
+
+Diagnosed in-game by Nividica 2026-08-19, and it is invisible from our side.
+
+`megacells-4.11.0.jar` has a failsafe: when a cell's storage used/free
+calculation cannot finish **within a single tick**, the cell deactivates and
+stops updating. It keeps telling the AE2 grid that items are stored and
+withdrawn, to stop them flooding other cells, so the grid and the cell drift
+apart. Recovering means pulling and re-inserting the cell, **which voids any
+excess items on it**. Warn players before suggesting it.
+
+It writes **nothing** to the server log. Do not go looking for it in
+`kubectl logs`; the only evidence is a player watching it happen.
+
+There is no tunable: `megacells-common.toml` exposes exactly one unrelated
+option (`spentNuclearWasteAllowed`). The fix is to move large stores off MEGA
+cells, which is what Nividica did.
+
+What our side controls is the **tick budget**. The failsafe trips when a
+calculation overruns one tick (50ms), so anything stealing server-thread time
+raises the odds: cgroup reclaim stalls, backup save freezes, chunk-gen spikes.
+Keeping mean tick low and the far tail short is genuine mitigation even though
+it cannot fix the mod. Current healthy baseline is ~7-8ms mean.
+
+This also gives the nightly restart a real justification. Nividica: "it gets
+worse and worse with time, which is why restarting seemed to have fixed it."
+The restart still reclaims almost no *memory* (see the no-leak note above),
+but it does reset accumulated AE2 state, so **do not remove the CronJob on the
+grounds that memory does not need it**.
+
+## Chest contents vanishing and reappearing
+
+Distinct from the MEGA cell issue and often confused with it. If contents
+vanish and later **reappear**, no data was lost: the server had them the whole
+time and the client rendered stale. That is a dropped server-to-client packet,
+and container-contents packets are large, which points at the MTU/MSS path
+issue above rather than at any mod. Real item loss does not come back.
+
 ## Restart and deploy checks
 
 - Nightly restart is `mc-nightly-restart`, 04:00 America/New_York, driving
