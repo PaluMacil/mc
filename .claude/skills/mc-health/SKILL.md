@@ -178,9 +178,34 @@ grounds that memory does not need it**.
 
 Distinct from the MEGA cell issue and often confused with it. If contents
 vanish and later **reappear**, no data was lost: the server had them the whole
-time and the client rendered stale. That is a dropped server-to-client packet,
-and container-contents packets are large, which points at the MTU/MSS path
-issue above rather than at any mod. Real item loss does not come back.
+time and the client rendered stale. Real item loss does not come back.
+
+The instinct is to blame the MTU path, but **check the size and the recovery
+before doing that**. Worked example, 2026-08-19: the chest held a trident, 18
+diamond and ~90 netherite scrap. `ClientboundContainerSetContentPacket` sends
+all menu slots (27 chest + 36 player inventory), so the payload is larger than
+"three stacks" suggests, but nowhere near 1280 bytes.
+
+The decisive argument is **TCP retransmits**. A single dropped segment is
+resent after an RTO and the client recovers in well under a second. An MTU
+black hole does *not* recover: it retransmits the same oversized segment until
+the connection dies, which is what produced the `Timed out` disconnects. So a
+chest that repopulates **without** a disconnect was a delayed packet, not a
+dropped one, and MTU is the wrong suspect.
+
+A brief server-thread stall explains it with no large packet required, and
+those were routine: `memory.events max` was 55,044 over 11 days, about one
+hard-limit hit every 17 seconds, each forcing direct reclaim on whichever
+thread allocated. Note that `Can't keep up` only fires above 2000ms, so the
+logs showed 0-3 events per day while sub-second stalls happened constantly and
+silently. A few hundred milliseconds is plenty to render an empty chest that
+fills in a moment later.
+
+Triage order for "displayed wrong then corrected itself":
+
+1. Did it recover without a disconnect? -> delay, not a drop. Suspect stalls.
+2. Was the payload plausibly over ~1240 bytes? -> only then consider MSS/MTU.
+3. Did it end in `Timed out`? -> now MTU is a real candidate.
 
 ## Restart and deploy checks
 
