@@ -146,6 +146,39 @@ read raw. The short version, each of which cost real debugging time:
   ~10s region-watcher lines in `debug.log` as a heartbeat to tell a server
   stall apart from a network problem.
 
+### Connection problems: check tin, not just the cluster
+
+Every player's TCP session terminates on `tin`, the VPS that fronts the game
+port, so a disconnect that leaves no trace in the server logs usually left one
+there. `ssh tin` works (Tailscale SSH); these are the logs worth reading, and
+what each one is good for:
+
+| Command | What it tells you |
+| --- | --- |
+| `sudo journalctl -u tin-pathwatch -p notice` | **Start here.** One verdict per 10s across each egress path. An episode shows as an `EVENT` line naming which path failed. |
+| `sudo journalctl -u tailscaled --since '...'` | The tailnet path. `open-conn-track: timeout ... => 100.71.141.66:30565` with `lastRecv=NNs` means tin could not reach jade for that long, which is a kick. |
+| `sudo tail /var/log/nginx/error.log` | `upstream timed out ... client: <player-ip>` is the same event seen from the proxy, and it names the affected player. |
+| `sudo journalctl -u tin-pathwatch -o cat` | Full per-run history including routine `ok` lines (debug priority), for reconstructing a window after the fact. |
+| `curl -s localhost:8081/healthz` | `tin-health`: Caddy, Tailscale, and the Jellyfin legs in one shot. |
+| `sudo ufw status verbose` | Should list `25999/tcp` and `41641/udp`. Also run `systemctl is-enabled ufw`: the two can disagree, see the tin README. |
+
+Correlate on **timestamps**, and mind the clocks: `tin` and the mc pod both log
+in CDT, but the K3s nodes log in UTC.
+
+In `tailscaled`'s output, `magicsock: endpoints changed` is constant background
+noise and means nothing on its own. The lines that carry signal are
+`does not know about peer ... removing route` and `netcheck: UDP is blocked`.
+
+Worked example, and the reason this section exists: recurring `Timed out` kicks
+were traced to ~55s blackouts on one of tin's provider's two upstream transits,
+which carries both jade's WAN and all of Tailscale's DERP and control plane, so
+the direct path and its fallback die together and it reads as "Tailscale is
+flapping". Nothing in this repo or the cluster was at fault. See
+[the write-up](https://github.com/PaluMacil/homelab/blob/main/investigations/2026-08-23-mc-timeouts-tin-transit-brownout.md)
+and the earlier
+[path-flap](https://github.com/PaluMacil/homelab/blob/main/investigations/2026-08-16-minecraft-timeouts-tailnet-path-flap.md)
+investigation, whose main lesson is that the obvious MTU explanation was wrong.
+
 ## Releasing a change
 
 Tag this repo, then bump the `?ref=` pin in homelab
