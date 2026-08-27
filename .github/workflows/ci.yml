@@ -48,6 +48,13 @@ jobs:
           git diff --exit-code -- ':*_templ.go' || {
             echo "generated templ code is stale; run 'templ generate' and commit"; exit 1; }
 
+      - name: nbtq vet/test/build
+        working-directory: tools/nbtq
+        run: |
+          go vet ./...
+          go test ./...
+          go build ./...
+
       - name: mc-invite vet/test/build
         working-directory: invite
         env:

@@ -179,6 +179,17 @@ and the earlier
 [path-flap](https://github.com/PaluMacil/homelab/blob/main/investigations/2026-08-16-minecraft-timeouts-tailnet-path-flap.md)
 investigation, whose main lesson is that the obvious MTU explanation was wrong.
 
+## Reading world data (NBT)
+
+`tools/nbtq` is a small stdlib-only NBT pretty-printer (its own Go module, its
+own CI step) for reading player data and mod stores off the data volume, which
+nothing in the itzg image can do. Its README doubles as the item-loss forensics
+runbook: where Sophisticated Backpacks keeps contents (a world-level store
+keyed by UUID, not the item stack, so a destroyed backpack can be handed back
+intact via `give` with the same `storage_uuid`), why diffing player `.dat`
+against an old snapshot misleads, and how to reach the restic repo in the
+`backup` container.
+
 ## Releasing a change
 
 Tag this repo, then bump the `?ref=` pin in homelab

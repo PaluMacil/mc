@@ -8,3 +8,4 @@
 # compiled Go binaries (named after their module dir)
 /web/web
 /invite/invite
+/tools/nbtq/nbtq
