@@ -40,6 +40,13 @@ spec:
       # stops the server at an unannounced time.
       backoffLimit: 0
       activeDeadlineSeconds: 420
+      # Delete finished Jobs after a day. KubeJobFailed fires on a failed Job
+      # object and clears only when that object is gone; failedJobsHistoryLimit
+      # prunes by count, never by age, so without this a single failure (e.g.
+      # RCON refused because jade was down at 03:55) pins the alert and a
+      # Degraded mc Application indefinitely. Pod logs are in Loki under
+      # {namespace="mc"}, so nothing is lost when the Job goes.
+      ttlSecondsAfterFinished: 86400
       template:
         spec:
           restartPolicy: Never
