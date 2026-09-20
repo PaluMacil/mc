@@ -100,8 +100,7 @@ named `minecraft`, not `mc-invite`, because it does more than invites
 The homelab **manifests** for Phase 3 (the `minecraft` ExternalSecret, the
 CNPG `minecraft` Database and managed role, and the `?ref=` pin) are
 already committed in the homelab repo. What remains here is the imperative
-work that never lives in git: seeding OpenBao and creating the DB
-credential Secrets.
+work that never lives in git: seeding the values into OpenBao.
 
 ### 4a. OIDC client secret in OpenBao (rename to the broad name)
 
@@ -121,29 +120,19 @@ Or seed it fresh:
 bao kv put kv/mc/minecraft oidc-client-secret='<client-secret-from-authentik>'
 ```
 
-### 4b. Database credential Secrets (imperative, both namespaces)
+### 4b. Database credentials in OpenBao
 
 Per the homelab postgres README. Use a URL-safe password (hex) so it drops
-cleanly into the connection `uri` (base64 can contain `/` or `+`, which
-would need percent-encoding):
+cleanly into the connection `uri` ESO composes (base64 can contain `/` or
+`+`, which would need percent-encoding):
 
 ```sh
-PGPASS=$(openssl rand -hex 24)
-
-kubectl -n postgres create secret generic minecraft-db-credentials \
-  --type=kubernetes.io/basic-auth \
-  --from-literal=username=minecraft \
-  --from-literal=password="$PGPASS"
-
-kubectl -n mc create secret generic minecraft-db-credentials \
-  --type=kubernetes.io/basic-auth \
-  --from-literal=username=minecraft \
-  --from-literal=password="$PGPASS" \
-  --from-literal=uri="postgresql://minecraft:${PGPASS}@postgres-pooler.postgres.svc.cluster.local:5432/minecraft"
-
-unset PGPASS
+bao kv put kv/postgres/minecraft-db-credentials \
+  username=minecraft password="$(openssl rand -hex 24)"
 ```
 
+Two homelab ExternalSecrets render that one entry as
+`minecraft-db-credentials` in both the `postgres` and `mc` namespaces.
 CNPG reconciles the `minecraft` role's password from the `postgres`-namespace
 Secret and creates the `minecraft` database (both from the committed
 manifests); the app reads the `mc`-namespace Secret's `uri` key. The app
@@ -156,15 +145,14 @@ The `?ref=` pin in `workloads/mc/kustomization.yaml` is bumped to `v0.4.0`
 and pushed alongside the `minecraft` ExternalSecret and CNPG Database/role.
 ArgoCD applies the base and overlay together. Order is forgiving: if a
 Secret is not yet present the pod waits and starts on its own once ESO
-(the `minecraft` OpenBao value) or the imperative `kubectl create`
-(`minecraft-db-credentials`) has produced it.
+has produced it from the OpenBao value.
 
 ## 6. Verify
 
 ```sh
 # secrets materialized
-kubectl -n mc get externalsecret            # mc-secrets, mc-r2, minecraft: SecretSynced / Ready
-kubectl -n mc get secret minecraft-db-credentials
+kubectl -n mc get externalsecret            # mc-secrets, mc-r2, minecraft, minecraft-db-credentials: SecretSynced / Ready
+kubectl -n postgres get externalsecret minecraft-db-credentials
 
 # database and role
 kubectl -n postgres get database minecraft  # Ready
@@ -192,8 +180,8 @@ Then from a browser:
 ## 7. Rollback
 
 Revert the `?ref=` pin in `workloads/mc/kustomization.yaml` (ArgoCD rolls
-the base back). The homelab-side additions (ExternalSecret, Database,
-role, imperative Secrets) are additive and safe to leave in place; the
+the base back). The homelab-side additions (ExternalSecrets, Database,
+role) are additive and safe to leave in place; the
 `Database` uses `databaseReclaimPolicy: retain`, so reverting does not
 drop data. The Authentik application and groups are likewise safe to
 leave. There is no world-data risk in either phase: neither touches the

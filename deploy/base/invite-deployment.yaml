@@ -92,8 +92,8 @@ spec:
               value: atm10-7.1-client.zip
             # Secrets. OIDC client secret from the ESO-materialized "minecraft"
             # Secret (kv/mc/minecraft); DB connection URI (points at the CNPG
-            # pooler) from the imperative minecraft-db-credentials basic-auth
-            # Secret; RCON password reused from the existing mc-secrets. The
+            # pooler) from the ESO-materialized minecraft-db-credentials basic-auth
+            # Secret (kv/postgres/minecraft-db-credentials); RCON password reused from the existing mc-secrets. The
             # "minecraft" names are deliberately broader than "invite".
             - name: INVITE_OIDC_CLIENT_SECRET
               valueFrom:

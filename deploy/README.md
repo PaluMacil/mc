@@ -51,14 +51,15 @@ This repo defines these names; OpenBao holds one kv field per Secret key
   (not `mc-invite`) because the app is broader than invites (guest
   sign-in, and later a live player list).
 
-One more Phase 3 Secret does **not** come from OpenBao:
-`minecraft-db-credentials` is created imperatively in both the `postgres`
-and `mc` namespaces per the homelab postgres README (a
-`kubernetes.io/basic-auth` Secret; CNPG reconciles the role password from
-the `postgres`-namespace copy, and the app mounts the `mc`-namespace
-copy's `uri` key, which points at the pooler). See `DEPLOY-PHASES-2-3.md`
-for the exact commands. Do not fold the DB password into OpenBao; follow
-the cluster convention.
+- `minecraft-db-credentials` (Phase 3): the `minecraft` Postgres role's
+  `username` and `password`, stored once at
+  `kv/postgres/minecraft-db-credentials` (under `postgres/`, not `mc/`,
+  per the homelab postgres convention). Two homelab ExternalSecrets render
+  it as `kubernetes.io/basic-auth` Secrets: CNPG reconciles the role
+  password from the `postgres`-namespace copy, and the app mounts the
+  `mc`-namespace copy's `uri` key, which ESO composes to point at the
+  pooler. Keep the password URL-safe, since it is templated into the
+  `uri` unescaped.
 
 ### Creating or rotating a value
 

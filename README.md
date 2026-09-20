@@ -494,7 +494,8 @@ enrollment, Postgres database, secrets) is in `DEPLOY-PHASES-2-3.md`.
   collapse behind CGNAT households), CSRF is covered by
   `Sec-Fetch-Site` (`http.CrossOriginProtection`), and every grant is
   auditable back to the inviter who minted the link.
-- **Secrets**: OIDC client secret via OpenBao + ESO (`kv/mc/mc-invite`);
-  DB credentials via the imperative `mc-invite-db-credentials` basic-auth
-  Secret carrying a pooler `uri` (the homelab postgres convention); RCON
+- **Secrets**: OIDC client secret via OpenBao + ESO (`kv/mc/minecraft`);
+  DB credentials likewise (`kv/postgres/minecraft-db-credentials`), rendered
+  as the `minecraft-db-credentials` basic-auth Secret carrying a pooler
+  `uri` (the homelab postgres convention); RCON
   password reused from `mc-secrets`. Field contract in `deploy/README.md`.
