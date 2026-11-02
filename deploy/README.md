@@ -20,7 +20,8 @@ Responsibilities split across two repos:
   contract is documented below.
 - **The homelab repo** owns the wiring: an `ExternalSecret` per Secret
   in its `workloads/mc/` overlay (`externalsecrets.yaml`). ESO reads
-  OpenBao through the cluster-wide `openbao` `ClusterSecretStore` and
+  OpenBao through the `openbao-namespace` `ClusterSecretStore` (which
+  confines the `mc` namespace to `kv/mc/*`) and
   writes `mc-secrets` and `mc-r2` into the `mc` namespace on a refresh
   interval (currently 1h). ArgoCD drift suppression for the CRD-defaulted
   fields on those `ExternalSecret`s is handled centrally in the homelab
@@ -53,8 +54,8 @@ This repo defines these names; OpenBao holds one kv field per Secret key
 
 - `minecraft-db-credentials` (Phase 3): the `minecraft` Postgres role's
   `username` and `password`, stored once at
-  `kv/postgres/minecraft-db-credentials` (under `postgres/`, not `mc/`,
-  per the homelab postgres convention). Two homelab ExternalSecrets render
+  `kv/mc/minecraft-db-credentials` (under the consuming namespace, per
+  the homelab postgres convention since 2026-11-01). Two homelab ExternalSecrets render
   it as `kubernetes.io/basic-auth` Secrets: CNPG reconciles the role
   password from the `postgres`-namespace copy, and the app mounts the
   `mc`-namespace copy's `uri` key, which ESO composes to point at the
