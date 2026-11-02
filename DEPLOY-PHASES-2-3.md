@@ -127,7 +127,7 @@ cleanly into the connection `uri` ESO composes (base64 can contain `/` or
 `+`, which would need percent-encoding):
 
 ```sh
-bao kv put kv/postgres/minecraft-db-credentials \
+bao kv put kv/mc/minecraft-db-credentials \
   username=minecraft password="$(openssl rand -hex 24)"
 ```
 
